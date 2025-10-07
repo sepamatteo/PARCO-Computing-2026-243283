@@ -2,15 +2,17 @@
 #include <vector>
 
 extern "C" {
-#include "../include/mmio.h"
+    #include "../include/mmio.h"
 }
 
 int main(int argc, char* argv[]) {
+    // validate command-line arguments and print usage if incorrect
     if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " matrix_file.mtx" << std::endl;
         return 1;
     }
 
+    // reads .mtx file passed as argument
     FILE* f = fopen(argv[1], "r");
     if (f == nullptr) {
         std::cerr << "Could not open file: " << argv[1] << std::endl;
@@ -24,6 +26,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // check matrix type: must be real, sparse matrix
     if (!mm_is_matrix(matcode) || !mm_is_sparse(matcode) || mm_is_complex(matcode)) {
         std::cerr << "Only real-valued sparse matrices supported." << std::endl;
         fclose(f);
@@ -37,6 +40,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // creates row_index, col_index, and values vectors
     std::vector<int> row_idx(nz);
     std::vector<int> col_idx(nz);
     std::vector<double> values(nz);
@@ -55,16 +59,16 @@ int main(int argc, char* argv[]) {
     }
     fclose(f);
 
-    // Create dense vector with all ones
+    // create dense vector with all ones
     std::vector<double> x(N, 1.0);
     std::vector<double> y(M, 0.0);
 
-    // Sequential SpMV
+    // perform sequential sparse matrix-vector multiplication
     for (int k = 0; k < nz; ++k) {
         y[row_idx[k]] += values[k] * x[col_idx[k]];
     }
 
-    // Output result vector y
+    // output result vector y
     for (int i = 0; i < M; ++i) {
         std::cout << "y[" << i << "] = " << y[i] << std::endl;
     }
