@@ -1,0 +1,73 @@
+#include <iostream>
+#include <vector>
+
+extern "C" {
+#include "../include/mmio.h"
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " matrix_file.mtx" << std::endl;
+        return 1;
+    }
+
+    FILE* f = fopen(argv[1], "r");
+    if (f == nullptr) {
+        std::cerr << "Could not open file: " << argv[1] << std::endl;
+        return 1;
+    }
+
+    MM_typecode matcode;
+    if (mm_read_banner(f, &matcode) != 0) {
+        std::cerr << "Could not process Matrix Market banner." << std::endl;
+        fclose(f);
+        return 1;
+    }
+
+    if (!mm_is_matrix(matcode) || !mm_is_sparse(matcode) || mm_is_complex(matcode)) {
+        std::cerr << "Only real-valued sparse matrices supported." << std::endl;
+        fclose(f);
+        return 1;
+    }
+
+    int M, N, nz;
+    if (mm_read_mtx_crd_size(f, &M, &N, &nz) != 0) {
+        std::cerr << "Could not read matrix size." << std::endl;
+        fclose(f);
+        return 1;
+    }
+
+    std::vector<int> row_idx(nz);
+    std::vector<int> col_idx(nz);
+    std::vector<double> values(nz);
+
+    for (int i = 0; i < nz; ++i) {
+        int r, c;
+        double val;
+        if (fscanf(f, "%d %d %lf", &r, &c, &val) != 3) {
+            std::cerr << "Error reading matrix entry." << std::endl;
+            fclose(f);
+            return 1;
+        }
+        row_idx[i] = r - 1; // convert 1-based to 0-based
+        col_idx[i] = c - 1;
+        values[i] = val;
+    }
+    fclose(f);
+
+    // Create dense vector with all ones
+    std::vector<double> x(N, 1.0);
+    std::vector<double> y(M, 0.0);
+
+    // Sequential SpMV
+    for (int k = 0; k < nz; ++k) {
+        y[row_idx[k]] += values[k] * x[col_idx[k]];
+    }
+
+    // Output result vector y
+    for (int i = 0; i < M; ++i) {
+        std::cout << "y[" << i << "] = " << y[i] << std::endl;
+    }
+
+    return 0;
+}
