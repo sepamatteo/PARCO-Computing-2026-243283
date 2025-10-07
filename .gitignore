@@ -1,0 +1,16 @@
+# Ignore output directories
+outputs/
+
+# Ignore common object files and executables
+*.o
+*.out
+*.exe
+*.log
+
+# Ignore VSCode/.idea project files (optional)
+.vscode/
+.idea/
+
+# Ignore OS files
+.DS_Store
+Thumbs.db

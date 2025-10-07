@@ -5,28 +5,47 @@ CC = gcc
 CXXFLAGS = -O2 -std=c++17 -Wall
 CFLAGS = -O2 -Wall
 
-# Targets
-TARGET_COO = spmv_coo
-TARGET_CSR = spmv_csr
+OUTPUT_DIR = outputs
+
+# Full paths to executables
+TARGET_COO = $(OUTPUT_DIR)/spmv_coo
+TARGET_CSR = $(OUTPUT_DIR)/spmv_csr
 
 # Source files
-SRCS_COO = src/spmv_coo.cpp src/mmio.c
-SRCS_CSR = src/spmv_csr.cpp src/mmio.c
+SRCS_CPP_COO = src/spmv_coo.cpp
+SRCS_CPP_CSR = src/spmv_csr.cpp
+SRCS_C = src/mmio.c
 
-# Default target builds both
-all: $(TARGET_COO) $(TARGET_CSR)
+# Object files
+OBJS_CPP_COO = $(SRCS_CPP_COO:.cpp=.o)
+OBJS_CPP_CSR = $(SRCS_CPP_CSR:.cpp=.o)
+OBJS_C = $(SRCS_C:.c=.o)
 
-# Build COO executable
-$(TARGET_COO): $(SRCS_COO)
+# Default target builds all
+all: $(OUTPUT_DIR) $(TARGET_COO) $(TARGET_CSR)
+
+$(OUTPUT_DIR):
+	mkdir -p $(OUTPUT_DIR)
+
+$(TARGET_COO): $(OBJS_CPP_COO) $(OBJS_C) | $(OUTPUT_DIR)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-# Build CSR executable
-$(TARGET_CSR): $(SRCS_CSR)
+$(TARGET_CSR): $(OBJS_CPP_CSR) $(OBJS_C) | $(OUTPUT_DIR)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-# Clean build artifacts
+# Compile C++ files
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Compile C files
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Shortcut targets for easy make calls
+spmv_coo: $(TARGET_COO)
+spmv_csr: $(TARGET_CSR)
+
 clean:
-	rm -f $(TARGET_COO) $(TARGET_CSR)
-	rm -f src/*.o
+	rm -f $(OBJS_CPP_COO) $(OBJS_CPP_CSR) $(OBJS_C) $(TARGET_COO) $(TARGET_CSR)
 
-.PHONY: all clean
+.PHONY: all clean spmv_coo spmv_csr

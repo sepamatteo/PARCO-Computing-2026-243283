@@ -2,7 +2,7 @@
 #include <vector>
 
 extern "C" {
-    #include "../include/mmio.h"
+#include "../include/mmio.h"
 }
 
 int main(int argc, char* argv[]) {
