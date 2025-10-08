@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <chrono>
 
 extern "C" {
 #include "../include/mmio.h"
@@ -64,14 +65,23 @@ int main(int argc, char* argv[]) {
     std::vector<double> y(M, 0.0);
 
     // perform sequential sparse matrix-vector multiplication
+    auto start = std::chrono::high_resolution_clock::now();
     for (int k = 0; k < nz; ++k) {
         y[row_idx[k]] += values[k] * x[col_idx[k]];
     }
+    auto end = std::chrono::high_resolution_clock::now();
 
     // output result vector y
     for (int i = 0; i < M; ++i) {
         std::cout << "y[" << i << "] = " << y[i] << std::endl;
     }
+    
+    std::chrono::duration<double, std::milli> elapsed = end - start;
+    
+    std::cout << std::endl;
+    std::cout << "==========================================================" << std::endl;
+    std::cout << "Multiplication took " << elapsed.count() << "ms" << std::endl;
+    std::cout << "==========================================================" << std::endl;
 
     return 0;
 }
