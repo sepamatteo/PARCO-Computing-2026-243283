@@ -65,35 +65,42 @@ int main(int argc, char* argv[]) {
     std::vector<double> x(N, 1.0);
     std::vector<double> y(M, 0.0);
 
-    // starting measurment
-    auto start = std::chrono::high_resolution_clock::now();
-    // perform sequential sparse matrix-vector multiplication
-    for (int k = 0; k < nz; ++k) {
-        y[row_idx[k]] += values[k] * x[col_idx[k]];
-    }
-    // ending measurment
-    auto end = std::chrono::high_resolution_clock::now();
-
-    // output result vector y
-    for (int i = 0; i < M; ++i) {
-        std::cout << "y[" << i << "] = " << y[i] << std::endl;
-    }
+    // this will clear the file content
+    std::ofstream ofs("../benchmarks/COO_exec_times.txt", std::ofstream::out | std::ofstream::trunc);
+    ofs.close();
     
-    std::chrono::duration<double, std::milli> elapsed = end - start;
+    // 10 runs of SpMV multiplication
+    for (int i = 0; i < 10; ++i) {
+        // starting measurment
+        auto start = std::chrono::high_resolution_clock::now();
+        // perform sequential SpMV multiplication
+        for (int k = 0; k < nz; ++k) {
+            y[row_idx[k]] += values[k] * x[col_idx[k]];
+        }
+        // ending measurment
+        auto end = std::chrono::high_resolution_clock::now();
     
-    std::cout << std::endl;
-    std::cout << "==========================================================" << std::endl;
-    std::cout << "Multiplication took " << elapsed.count() << "ms" << std::endl;
-    std::cout << "==========================================================" << std::endl;
-    //std::cout << std::chrono::high_resolution_clock::is_steady;
-    
-    // writes execution times to file
-    std::ofstream outfile("benchmarks/COO_exec_times.txt", std::ios_base::app);
-    if (outfile.is_open()) {
-        outfile << elapsed.count() << "\n";
-        outfile.close();
-    } else {
-        std::cerr << "Warning: unable to open exec_time file for writing \n";
+        // output result vector y
+        for (int i = 0; i < M; ++i) {
+            std::cout << "y[" << i << "] = " << y[i] << std::endl;
+        }
+        
+        std::chrono::duration<double, std::milli> elapsed = end - start;
+        
+        std::cout << std::endl;
+        std::cout << "==========================================================" << std::endl;
+        std::cout << "Multiplication took " << elapsed.count() << "ms" << std::endl;
+        std::cout << "==========================================================" << std::endl;
+        //std::cout << std::chrono::high_resolution_clock::is_steady;
+        
+        // writes execution times to file
+        std::ofstream outfile("benchmarks/COO_exec_times.txt", std::ios_base::app);
+        if (outfile.is_open()) {
+            outfile << elapsed.count() << "\n";
+            outfile.close();
+        } else {
+            std::cerr << "Warning: unable to open exec_time file for writing \n";
+        }
     }
     
     return 0;
