@@ -88,9 +88,15 @@ int main(int argc, char* argv[]) {
     std::vector<double> x(N, 1.0), y(M, 0.0);
 
     // this will clear the file content
-    std::ofstream ofs("..benchmarks/CSR_exec_times.txt", std::ofstream::out | std::ofstream::trunc);
+    std::ofstream ofs("../benchmarks/CSR_exec_times.txt", std::ofstream::out | std::ofstream::trunc);
     ofs.close();
     
+    
+    // writes execution times to file
+    std::ofstream outfile("../benchmarks/CSR_exec_times.txt", std::ios_base::app);
+    if (!outfile.is_open()) {
+        std::cerr << "Warning: unable to open exec_time file for writing \n";
+    }
     // 10 runs of SpMV multiplication
     for (int i = 0; i < 10 ; ++i) {
         // starting measurment
@@ -108,16 +114,10 @@ int main(int argc, char* argv[]) {
     
         auto elapsed = std::chrono::duration<double, std::milli>(end - start);
         std::cout << "CSR multiplication took " << elapsed.count() << " ms" << std::endl;
-    
-        // writes execution times to file
-        std::ofstream outfile("benchmarks/CSR_exec_times.txt", std::ios_base::app);
-        if (outfile.is_open()) {
-            outfile << elapsed.count() << "\n";
-            outfile.close();
-        } else {
-            std::cerr << "Warning: unable to open exec_time file for writing \n";
-        }
+        
+        outfile << elapsed.count() << "\n";
     }
+    outfile.close();
     
     return 0;
 }

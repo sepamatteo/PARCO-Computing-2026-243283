@@ -69,6 +69,13 @@ int main(int argc, char* argv[]) {
     std::ofstream ofs("../benchmarks/COO_exec_times.txt", std::ofstream::out | std::ofstream::trunc);
     ofs.close();
     
+    // writes execution times to file
+    std::ofstream outfile("../benchmarks/COO_exec_times.txt", std::ios_base::app);
+    if (!outfile.is_open()) {
+        std::cerr << "Warning: unable to open exec_time file for writing \n";
+        exit(1);
+    }
+    
     // 10 runs of SpMV multiplication
     for (int i = 0; i < 10; ++i) {
         // starting measurment
@@ -92,16 +99,9 @@ int main(int argc, char* argv[]) {
         std::cout << "Multiplication took " << elapsed.count() << "ms" << std::endl;
         std::cout << "==========================================================" << std::endl;
         //std::cout << std::chrono::high_resolution_clock::is_steady;
-        
-        // writes execution times to file
-        std::ofstream outfile("benchmarks/COO_exec_times.txt", std::ios_base::app);
-        if (outfile.is_open()) {
-            outfile << elapsed.count() << "\n";
-            outfile.close();
-        } else {
-            std::cerr << "Warning: unable to open exec_time file for writing \n";
-        }
+        outfile << elapsed.count() << "\n";
     }
+    outfile.close();
     
     return 0;
 }
