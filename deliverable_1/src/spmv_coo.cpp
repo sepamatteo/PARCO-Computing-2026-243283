@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <chrono>
+#include <fstream>
 
 extern "C" {
 #include "../include/mmio.h"
@@ -64,11 +65,13 @@ int main(int argc, char* argv[]) {
     std::vector<double> x(N, 1.0);
     std::vector<double> y(M, 0.0);
 
-    // perform sequential sparse matrix-vector multiplication
+    // starting measurment
     auto start = std::chrono::high_resolution_clock::now();
+    // perform sequential sparse matrix-vector multiplication
     for (int k = 0; k < nz; ++k) {
         y[row_idx[k]] += values[k] * x[col_idx[k]];
     }
+    // ending measurment
     auto end = std::chrono::high_resolution_clock::now();
 
     // output result vector y
@@ -82,6 +85,16 @@ int main(int argc, char* argv[]) {
     std::cout << "==========================================================" << std::endl;
     std::cout << "Multiplication took " << elapsed.count() << "ms" << std::endl;
     std::cout << "==========================================================" << std::endl;
-
+    //std::cout << std::chrono::high_resolution_clock::is_steady;
+    
+    // writes execution times to file
+    std::ofstream outfile("benchmarks/COO_exec_times.txt", std::ios_base::app);
+    if (outfile.is_open()) {
+        outfile << elapsed.count() << "\n";
+        outfile.close();
+    } else {
+        std::cerr << "Warning: unable to open exec_time file for writing \n";
+    }
+    
     return 0;
 }
