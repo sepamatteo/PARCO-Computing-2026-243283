@@ -11,7 +11,7 @@ echo "+-----------------------------+"
 echo "COO vs CSR SpMV Benchmark Runner"
 echo ""
 
-sleep 5
+sleep 2
 
 ./../outputs/spmv_coo ../data/bcsstk18/bcsstk18.mtx 
 sleep 1 
