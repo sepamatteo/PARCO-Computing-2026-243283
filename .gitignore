@@ -7,6 +7,8 @@ outputs/
 *.exe
 *.log
 *.tar
+*.txt
+*.png
 
 # Ignore VSCode/.idea project files (optional)
 .vscode/
