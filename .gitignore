@@ -9,6 +9,7 @@ outputs/
 *.tar
 *.txt
 *.png
+*.err
 
 # Ignore VSCode/.idea project files (optional)
 .vscode/
