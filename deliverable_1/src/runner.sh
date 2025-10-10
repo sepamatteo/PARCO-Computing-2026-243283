@@ -13,9 +13,9 @@ echo ""
 
 sleep 2
 
-./../outputs/spmv_coo ../data/bcsstk18/bcsstk18.mtx 
+./../outputs/spmv_coo ../data/cage14/cage14.mtx 
 sleep 1 
-./../outputs/spmv_csr ../data/bcsstk18/bcsstk18.mtx
+./../outputs/spmv_csr ../data/cage14/cage14.mtx
 
 cd ../benchmarks
 python3 script.py
