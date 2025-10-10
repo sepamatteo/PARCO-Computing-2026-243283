@@ -10,6 +10,7 @@ outputs/
 *.txt
 *.png
 *.err
+*.mtx
 
 # Ignore VSCode/.idea project files (optional)
 .vscode/
