@@ -2,7 +2,7 @@
 CXX = g++
 CC = gcc
 
-CXXFLAGS = -O2 -std=c++17 -Wall
+CXXFLAGS = -O2 -std=c++11 -Wall
 CFLAGS = -O2 -Wall
 
 OUTPUT_DIR = outputs

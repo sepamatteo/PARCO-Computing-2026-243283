@@ -1,0 +1,26 @@
+#!/bin/bash
+# SpMV_compile
+#PBS -N SpMV_compile
+# Output files
+#PBS -o ../logs/spmv_compile.out
+#PBS -e ../logs/spmv_compile.err
+# Queue name
+#PBS -q short_cpuQ
+# Set the maximum wall time
+#PBS -l walltime=0:10:00
+# Number of nodes, cpus, mpi processors and amount of memory
+#PBS -l select=1:ncpus=4:mem=1gb
+
+# Modules for C
+module load gcc91
+g++() {
+    g++-9.1.0 "$@"
+}
+g++ --version
+# Select the working directory
+cd "$PBS_O_WORKDIR"   # go to the directory where qsub was run
+
+echo "Running in: $(pwd)"
+
+make -C ../ clean
+make -C ../
