@@ -2,8 +2,8 @@
 # SpMV_run
 #PBS -N SpMV_run
 # Output files
-#PBS -o ../logs/spmv_run.out
-#PBS -e ../logs/spmv_run.err
+#PBS -o logs/spmv_run.out
+#PBS -e logs/spmv_run.err
 # Queue name
 #PBS -q short_cpuQ
 # Set the maximum wall time

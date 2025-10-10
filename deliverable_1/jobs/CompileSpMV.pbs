@@ -2,8 +2,8 @@
 # SpMV_compile
 #PBS -N SpMV_compile
 # Output files
-#PBS -o ../logs/spmv_compile.out
-#PBS -e ../logs/spmv_compile.err
+#PBS -o logs/spmv_compile.out
+#PBS -e logs/spmv_compile.err
 # Queue name
 #PBS -q short_cpuQ
 # Set the maximum wall time
