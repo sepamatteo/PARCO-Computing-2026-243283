@@ -11,6 +11,8 @@
 # Number of nodes, cpus, mpi processors and amount of memory
 #PBS -l select=1:ncpus=4:mem=1gb
 
+mkdir -p ../logs
+
 # Modules for C
 module load gcc91
 g++() {
