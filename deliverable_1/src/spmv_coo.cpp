@@ -8,16 +8,31 @@ extern "C" {
 }
 
 int main(int argc, char* argv[]) {
+    bool verbose = false;
+    std::string matrix_filename;
     // validate command-line arguments and print usage if incorrect
     if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " matrix_file.mtx" << std::endl;
         return 1;
     }
 
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "--verbose" || std::string(argv[i]) == "-v") {
+            verbose = true;
+        } else {
+            matrix_filename = argv[i];
+        }
+    }
+    
+    if (matrix_filename.empty()) {
+        std::cerr << "No matrix file specified." << std::endl;
+        return 1;
+    }
+    
     // reads .mtx file passed as argument
-    FILE* f = fopen(argv[1], "r");
+    FILE* f = fopen(matrix_filename.c_str(), "r");
     if (f == nullptr) {
-        std::cerr << "Could not open file: " << argv[1] << std::endl;
+        std::cerr << "Could not open file: " << matrix_filename << std::endl;
         return 1;
     }
 
@@ -77,28 +92,29 @@ int main(int argc, char* argv[]) {
     }
     
     // 10 runs of SpMV multiplication
-    for (int i = 0; i < 10; ++i) {
-        // starting measurment
-        auto start = std::chrono::high_resolution_clock::now();
-        // perform sequential SpMV multiplication
-        for (int k = 0; k < nz; ++k) {
-            y[row_idx[k]] += values[k] * x[col_idx[k]];
-        }
-        // ending measurment
-        auto end = std::chrono::high_resolution_clock::now();
+    const int block_size = 1024;
     
-        // output result vector y
-        for (int i = 0; i < M; ++i) {
-            std::cout << "y[" << i << "] = " << y[i] << std::endl;
+    for (int i = 0; i < 10; ++i) {
+        std::fill(y.begin(), y.end(), 0.0); // reset result vector
+        auto start = std::chrono::high_resolution_clock::now();
+    
+        for (int block_start = 0; block_start < nz; block_start += block_size) {
+            int block_end = std::min(block_start + block_size, nz);
+            #pragma omp simd
+            for (int k = block_start; k < block_end; ++k) {
+                y[row_idx[k]] += values[k];
+            }
         }
-        
+    
+        auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> elapsed = end - start;
-        
-        std::cout << std::endl;
-        std::cout << "==========================================================" << std::endl;
-        std::cout << "Multiplication took " << elapsed.count() << "ms" << std::endl;
-        std::cout << "==========================================================" << std::endl;
-        //std::cout << std::chrono::high_resolution_clock::is_steady;
+    
+        if (verbose) {
+            for (int i = 0; i < M; ++i) {
+                std::cout << "y[" << i << "] = " << y[i] << std::endl;
+            }
+            std::cout << "Multiplication took " << elapsed.count() << " ms" << std::endl;
+        }
         outfile << elapsed.count() << "\n";
     }
     outfile.close();

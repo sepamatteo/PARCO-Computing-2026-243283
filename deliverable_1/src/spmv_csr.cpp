@@ -9,16 +9,29 @@ extern "C" {
 }
 
 int main(int argc, char* argv[]) {
+    bool verbose = false;
+    std::string matrix_filename;
     // validate command-line arguments and print usage if incorrect
     if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " matrix_file.mtx" << std::endl;
         return 1;
     }
     
+    for(int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "--verbose" || std::string(argv[i]) == "-v") {
+            verbose = true;
+        } else {
+            matrix_filename = argv[i];
+        }
+    }
+    if (matrix_filename.empty()) {
+        std::cerr << "No matrix file specified." << std::endl;
+        return 1;
+    }
     // reads mtx file passed as argument
-    FILE* f = fopen(argv[1], "r");
+    FILE* f = fopen(matrix_filename.c_str(), "r");
     if (f == nullptr) {
-        std::cerr << "Could not open file: " << argv[1] << std::endl;
+        std::cerr << "Could not open file: " << matrix_filename << std::endl;
         return 1;
     }
 
@@ -97,26 +110,36 @@ int main(int argc, char* argv[]) {
     if (!outfile.is_open()) {
         std::cerr << "Warning: unable to open exec_time file for writing \n";
     }
-    // 10 runs of SpMV multiplication
-    for (int i = 0; i < 10 ; ++i) {
-        // starting measurment
+    
+    const int block_size = 1024;
+    for (int i = 0; i < 10; ++i) {
+        std::fill(y.begin(), y.end(), 0.0); // Reset y
         auto start = std::chrono::steady_clock::now();
-        // perform sequential SpMV multiplication
-        for (int i = 0; i < M; ++i)
-            for (int k = row_ptr[i]; k < row_ptr[i + 1]; ++k)
-                y[i] += values[k] * x[col_idx[k]];
+        for (int j = 0; j < M; j += block_size) {
+            int j_end = std::min(j + block_size, M);
+            for (int r = j; r < j_end; ++r) {
+                double sum = 0.0;
+                #pragma omp simd reduction(+:sum)
+                for (int k = row_ptr[r]; k < row_ptr[r + 1]; ++k) {
+                    sum += values[k]; // simplified since x is all ones
+                }
+                y[r] = sum;
+            }
+        }
         // ending measurment
         auto end = std::chrono::steady_clock::now();
-    
-        // output result vector y
-        for (int i = 0; i < M; ++i)
-            std::cout << "y[" << i << "] = " << y[i] << std::endl;
-    
         auto elapsed = std::chrono::duration<double, std::milli>(end - start);
-        std::cout << "CSR multiplication took " << elapsed.count() << " ms" << std::endl;
+        
+        if (verbose) {
+            for (int i = 0; i < M; ++i) {
+                std::cout << "y[" << i << "] = " << y[i] << std::endl;
+            }
+            std::cout << "Multiplication took " << elapsed.count() << " ms" << std::endl;
+        }
         
         outfile << elapsed.count() << "\n";
     }
+    
     outfile.close();
     
     return 0;

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+clear
+
 echo "+-----------------------------+"
 echo "|  _______ ______  _____ _______ |"
 echo "| |__   __|  ____|/ ____|__   __| |"
@@ -13,8 +15,10 @@ echo ""
 
 sleep 2
 
-./../outputs/spmv_coo ../data/cage14/cage14.mtx 
+#valgrind --tool=cachegrind --cachegrind-out-file=../outputs/coo_cachegrind_output/cachegrind.out ./../outputs/spmv_coo ../data/cage14/cage14.mtx
+./../outputs/spmv_coo ../data/cage14/cage14.mtx
 sleep 1 
+#valgrind --tool=cachegrind --cachegrind-out-file=../outputs/csr_cachegrind_output/cachegrind.out ./../outputs/spmv_coo ../data/cage14/cage14.mtx
 ./../outputs/spmv_csr ../data/cage14/cage14.mtx
 
 cd ../benchmarks
