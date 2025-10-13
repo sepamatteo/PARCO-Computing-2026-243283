@@ -9,7 +9,7 @@
 # Set the maximum wall time
 #PBS -l walltime=0:10:00
 # Number of nodes, cpus, mpi processors and amount of memory
-#PBS -l select=1:ncpus=4:mem=1gb
+#PBS -l select=1:ncpus=4:mem=16gb
 
 
 
