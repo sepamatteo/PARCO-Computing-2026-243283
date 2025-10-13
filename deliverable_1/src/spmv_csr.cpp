@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <fstream>
 
-#define BLOCK_SIZE 1024
+#define BLOCK_SIZE 64
 
 extern "C" {
 #include "../include/mmio.h"
