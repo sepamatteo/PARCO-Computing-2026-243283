@@ -3,6 +3,8 @@
 #include <chrono>
 #include <fstream>
 
+#define BLOCK_SIZE 1024
+
 extern "C" {
 #include "../include/mmio.h"
 }
@@ -92,14 +94,12 @@ int main(int argc, char* argv[]) {
     }
     
     // 10 runs of SpMV multiplication
-    const int block_size = 1024;
-    
     for (int i = 0; i < 10; ++i) {
         std::fill(y.begin(), y.end(), 0.0); // reset result vector
         auto start = std::chrono::high_resolution_clock::now();
     
-        for (int block_start = 0; block_start < nz; block_start += block_size) {
-            int block_end = std::min(block_start + block_size, nz);
+        for (int block_start = 0; block_start < nz; block_start += BLOCK_SIZE) {
+            int block_end = std::min(block_start + BLOCK_SIZE, nz);
             #pragma omp simd
             for (int k = block_start; k < block_end; ++k) {
                 y[row_idx[k]] += values[k]; // simplified since y is all ones

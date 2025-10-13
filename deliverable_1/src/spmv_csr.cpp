@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <fstream>
 
+#define BLOCK_SIZE 1024
+
 extern "C" {
 #include "../include/mmio.h"
 }
@@ -111,12 +113,11 @@ int main(int argc, char* argv[]) {
         std::cerr << "Warning: unable to open exec_time file for writing \n";
     }
     
-    const int block_size = 1024;
     for (int i = 0; i < 10; ++i) {
         std::fill(y.begin(), y.end(), 0.0); // Reset y
         auto start = std::chrono::steady_clock::now();
-        for (int j = 0; j < M; j += block_size) {
-            int j_end = std::min(j + block_size, M);
+        for (int j = 0; j < M; j += BLOCK_SIZE) {
+            int j_end = std::min(j + BLOCK_SIZE, M);
             for (int r = j; r < j_end; ++r) {
                 double sum = 0.0;
                 #pragma omp simd reduction(+:sum)
