@@ -2,7 +2,7 @@
 CXX = g++
 CC = gcc
 
-CXXFLAGS = -O3 -std=c++11 -Wall -fopenmp -march=native -fopt-info-vec-all
+CXXFLAGS = -O2 -std=c++11 -Wall -fopenmp
 CFLAGS = -O2 -Wall
 
 OUTPUT_DIR = outputs
