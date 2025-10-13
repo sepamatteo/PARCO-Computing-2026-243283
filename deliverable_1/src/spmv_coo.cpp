@@ -102,7 +102,8 @@ int main(int argc, char* argv[]) {
             int block_end = std::min(block_start + block_size, nz);
             #pragma omp simd
             for (int k = block_start; k < block_end; ++k) {
-                y[row_idx[k]] += values[k];
+                y[row_idx[k]] += values[k]; // simplified since y is all ones
+                //y[row_idx[k]] += values[k] * y[k];
             }
         }
     

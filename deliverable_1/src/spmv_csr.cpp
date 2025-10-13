@@ -122,6 +122,7 @@ int main(int argc, char* argv[]) {
                 #pragma omp simd reduction(+:sum)
                 for (int k = row_ptr[r]; k < row_ptr[r + 1]; ++k) {
                     sum += values[k]; // simplified since x is all ones
+                    //sum += values[k] * y[k];
                 }
                 y[r] = sum;
             }
