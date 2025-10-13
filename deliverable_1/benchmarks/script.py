@@ -13,16 +13,24 @@ csr_times = readTimes("CSR_exec_times.txt")
 # calculates average
 coo_avg = np.mean(coo_times)
 csr_avg = np.mean(csr_times)
+coo_90 = np.percentile(coo_times, 90)
+csr_90 = np.percentile(csr_times, 90)
 
 print(f"COO average: {coo_avg:.8f} ms")
 print(f"CSR average: {csr_avg:.8f} ms")
+print(f"COO 90th percentile: {coo_90:.8f} ms")
+print(f"CSR 90th percentile: {csr_90:.8f} ms")
 
-# plots
+# plot
 plt.figure(figsize=(8,5))
 plt.plot(coo_times, 'ro-', label='COO times')
 plt.plot(csr_times, 'bo-', label='CSR times')
+
 plt.axhline(coo_avg, color='red', linestyle='--', label=f'COO avg ({coo_avg:.5f} ms)')
 plt.axhline(csr_avg, color='blue', linestyle='--', label=f'CSR avg ({csr_avg:.5f} ms)')
+plt.axhline(coo_90, color='purple', linestyle='-.', label=f'COO 90% percentile ({coo_90:.5f} ms)')
+plt.axhline(csr_90, color='gold', linestyle='-.', label=f'CSR 90% percentile ({csr_90:.5f} ms)')
+
 plt.title('Benchmark: COO vs CSR execution times')
 plt.xlabel('Run #')
 plt.ylabel('Time (ms)')
