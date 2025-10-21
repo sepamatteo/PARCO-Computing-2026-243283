@@ -118,9 +118,10 @@ int main(int argc, char* argv[]) {
         auto start = std::chrono::steady_clock::now();
         for (int j = 0; j < M; j += BLOCK_SIZE) {
             int j_end = std::min(j + BLOCK_SIZE, M);
+            #pragma omp simd
             for (int r = j; r < j_end; ++r) {
                 double sum = 0.0;
-                #pragma omp simd reduction(+:sum)
+                //#pragma omp simd reduction(+:sum)
                 for (int k = row_ptr[r]; k < row_ptr[r + 1]; ++k) {
                     sum += values[k]; // simplified since x is all ones
                     //sum += values[k] * y[k];
