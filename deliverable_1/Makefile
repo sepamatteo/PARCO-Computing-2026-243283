@@ -2,8 +2,8 @@
 CXX = g++
 CC = gcc
 
-CXXFLAGS = -O2 -std=c++11 -Wall -fopenmp
-CFLAGS = -O2 -Wall
+CXXFLAGS = -O3 -std=c++11 -Wall -fopenmp -ffast-math -march=native
+CFLAGS = -O3 -Wall
 
 OUTPUT_DIR = outputs
 
