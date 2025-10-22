@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdio>
 #include <fstream>
+#include <random>
 
 #define BLOCK_SIZE 64
 
@@ -99,8 +100,14 @@ int main(int argc, char* argv[]) {
         values[dest] = val_coo[i];
     }
 
-    // create dense vector with all ones
-    std::vector<double> x(N, 1.0), y(M, 0.0);
+    // generate random monodimensional array
+    std::vector<double> x(N), y(M, 0.0);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> dis(0.0, 1.0);
+    for (int i = 0; i < N; ++i) {
+        x[i] = dis(gen);
+    }
 
     // this will clear the file content
     std::ofstream ofs("../benchmarks/CSR_exec_times.txt", std::ofstream::out | std::ofstream::trunc);
@@ -123,8 +130,7 @@ int main(int argc, char* argv[]) {
                 double sum = 0.0;
                 //#pragma omp simd reduction(+:sum)
                 for (int k = row_ptr[r]; k < row_ptr[r + 1]; ++k) {
-                    sum += values[k]; // simplified since x is all ones
-                    //sum += values[k] * y[k];
+                    sum += values[k] * x[col_idx[k]];
                 }
                 y[r] = sum;
             }

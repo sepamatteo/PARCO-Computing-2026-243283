@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 #include <vector>
 #include <chrono>
 #include <fstream>
@@ -78,9 +79,14 @@ int main(int argc, char* argv[]) {
     }
     fclose(f);
 
-    // create dense vector with all ones
-    std::vector<double> x(N, 1.0);
-    std::vector<double> y(M, 0.0);
+    // generate random monodimensional array
+    std::vector<double> x(N), y(M, 0.0);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> dis(0.0, 1.0);
+    for (int i = 0; i < N; ++i) {
+        x[i] = dis(gen);
+    }
 
     // this will clear the file content
     std::ofstream ofs("../benchmarks/COO_exec_times.txt", std::ofstream::out | std::ofstream::trunc);
@@ -102,8 +108,8 @@ int main(int argc, char* argv[]) {
             int block_end = std::min(block_start + BLOCK_SIZE, nz);
             #pragma omp simd
             for (int k = block_start; k < block_end; ++k) {
-                y[row_idx[k]] += values[k]; // simplified since y is all ones
-                //y[row_idx[k]] += values[k] * y[k];
+                //y[row_idx[k]] += values[k]; // simplified since y is all ones
+                y[row_idx[k]] += values[k] * x[col_idx[k]];
             }
         }
     
