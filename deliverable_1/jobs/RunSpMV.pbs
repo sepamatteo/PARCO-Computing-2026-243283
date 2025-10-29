@@ -28,3 +28,4 @@ mkdir -p logs
 
 ../outputs/spmv_coo ../data/cage14/cage14.mtx
 ../outputs/spmv_csr ../data/cage14/cage14.mtx
+../outputs/parallel_spmv_csr ../data/cage14/cage14.mtx
