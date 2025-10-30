@@ -1,5 +1,4 @@
 #include <iostream>
-#include <ratio>
 #include <vector>
 #include <chrono>
 #include <cstdio>
@@ -111,6 +110,24 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < N; ++i) {
         x[i] = dis(gen);
     }
+    
+    // Warm-up (3 iterations, not timed)
+    for (int i = 0; i < 3; ++i) {
+        #pragma omp parallel for
+        for (int j = 0; j < M; ++j) y[j] = 0.0;
+    
+        #pragma omp parallel
+        {
+            #pragma omp for schedule(dynamic, BLOCK_SIZE) nowait
+            for (int r = 0; r < M; ++r) {
+                double sum = 0.0;
+                for (int k = row_ptr[r]; k < row_ptr[r+1]; ++k) {
+                    sum += values[k] * x[col_idx[k]];
+                }
+                y[r] = sum;
+            }
+        }
+    }
 
     // this will clear the file content
     std::ofstream ofs("../benchmarks/Parallel_CSR_exec_times.txt", std::ofstream::out | std::ofstream::trunc);
@@ -125,23 +142,25 @@ int main(int argc, char* argv[]) {
     
     // SET THREAD COUNT
     omp_set_num_threads(NUM_THREADS);
+    //std::vector<std::vector<double>> y_thread_local(NUM_THREADS, std::vector<double>(M, 0.0));
     
     for (int i = 0; i < 10; ++i) {
-        std::fill(y.begin(), y.end(), 0.0);
+        // ====== Parallel SpMV =================
+        #pragma omp parallel for
+        for (int j = 0; j < M; ++j) y[j] = 0.0;
         
         auto start = std::chrono::steady_clock::now();
         
-        // ==== PARALLEL SPMV ==================
+        // SINGLE PHASE SPMV - OPTIMAL!
         #pragma omp parallel
-        {            
-            #pragma omp for schedule(dynamic, 64) nowait
+        {
+            #pragma omp for schedule(dynamic, BLOCK_SIZE) nowait
             for (int r = 0; r < M; ++r) {
                 double sum = 0.0;
-                #pragma omp simd reduction(+:sum)
                 for (int k = row_ptr[r]; k < row_ptr[r+1]; ++k) {
                     sum += values[k] * x[col_idx[k]];
                 }
-                y[r] = sum;
+                y[r] = sum;  // DIRECT WRITE - NO RACE!
             }
         }
         // =====================================
