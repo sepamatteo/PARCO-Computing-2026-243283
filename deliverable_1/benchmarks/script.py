@@ -1,17 +1,23 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
-# function to open benchmarks files
+## Argument parser
+parser = argparse.ArgumentParser(description='Process benchmark data.')
+parser.add_argument('--show-plot', action='store_true', help='Display the plot')
+args = parser.parse_args()
+
+# Function to read benchmarks times
 def readTimes(filename):
     with open (filename, 'r') as f:
         return [float(line.strip()) for line in f if line.strip()]
-        
-        
+
+# Load data
 coo_times = readTimes("COO_exec_times.txt")
 csr_times = readTimes("CSR_exec_times.txt")
 parallel_csr_times = readTimes("Parallel_CSR_exec_times.txt")
 
-# calculates average
+# Compute statistics
 coo_avg = np.mean(coo_times)
 csr_avg = np.mean(csr_times)
 parallel_csr_avg = np.mean(parallel_csr_times)
@@ -19,6 +25,7 @@ coo_90 = np.percentile(coo_times, 90)
 csr_90 = np.percentile(csr_times, 90)
 parallel_csr_90 = np.percentile(parallel_csr_times, 90)
 
+# Print results
 print(f"COO average: {coo_avg:.8f} ms")
 print(f"CSR average: {csr_avg:.8f} ms")
 print(f"Parallel CSR average: {parallel_csr_avg:.8f} ms")
@@ -26,7 +33,7 @@ print(f"COO 90th percentile: {coo_90:.8f} ms")
 print(f"CSR 90th percentile: {csr_90:.8f} ms")
 print(f"Parallel CSR 90th percentile: {parallel_csr_90:.8f} ms")
 
-# plot
+# Create plot
 plt.figure(figsize=(8,5))
 plt.plot(coo_times, 'ro-', label='COO times')
 plt.plot(csr_times, 'bo-', label='CSR times')
@@ -46,4 +53,7 @@ plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.savefig('benchmark_plot.png')
-#plt.show()
+
+# Checks for argument in order to show plot
+if args.show_plot:
+    plt.show()

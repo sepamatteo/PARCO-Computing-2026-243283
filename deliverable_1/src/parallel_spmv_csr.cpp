@@ -112,6 +112,9 @@ int main(int argc, char* argv[]) {
     }
     
     // Warm-up (3 iterations, not timed)
+    if (verbose) {
+        std::cout << "Running 3 warm-up iterations for parallel CSR SpMV..." << std::endl;
+    }
     for (int i = 0; i < 3; ++i) {
         #pragma omp parallel for
         for (int j = 0; j < M; ++j) y[j] = 0.0;
@@ -141,8 +144,14 @@ int main(int argc, char* argv[]) {
     }
     
     // SET THREAD COUNT
-    omp_set_num_threads(NUM_THREADS);
-    //std::vector<std::vector<double>> y_thread_local(NUM_THREADS, std::vector<double>(M, 0.0));
+    int num_threads = NUM_THREADS;
+    if (getenv("OMP_NUM_THREADS") != nullptr) {
+        num_threads = atoi(getenv("OMP_NUM_THREADS"));
+    }
+    omp_set_num_threads(num_threads);
+    if (verbose) {
+        std::cout << "Using: " << num_threads << " threads\n";
+    }
     
     for (int i = 0; i < 10; ++i) {
         // ====== Parallel SpMV =================
@@ -151,7 +160,6 @@ int main(int argc, char* argv[]) {
         
         auto start = std::chrono::steady_clock::now();
         
-        // SINGLE PHASE SPMV - OPTIMAL!
         #pragma omp parallel
         {
             #pragma omp for schedule(dynamic, BLOCK_SIZE) nowait
@@ -160,7 +168,7 @@ int main(int argc, char* argv[]) {
                 for (int k = row_ptr[r]; k < row_ptr[r+1]; ++k) {
                     sum += values[k] * x[col_idx[k]];
                 }
-                y[r] = sum;  // DIRECT WRITE - NO RACE!
+                y[r] = sum;
             }
         }
         // =====================================
@@ -168,16 +176,13 @@ int main(int argc, char* argv[]) {
         auto elapsed = std::chrono::duration<double, std::milli>(end - start);
         
         if (verbose) {
-            for (int i = 0; i < M; ++i) {
-                std::cout << "y[" << i << "] = " << y[i] << std::endl;
-            }
             std::cout << "Multiplication took " << elapsed.count() << " ms" << std::endl;
         }
         
         outfile << elapsed.count() << "\n";
-}
-    
+    }
+
     outfile.close();
-    
+
     return 0;
 }

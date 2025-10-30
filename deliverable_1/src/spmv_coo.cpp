@@ -99,6 +99,21 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
     
+    // 3 warm-up runs
+    if (verbose) {
+        std::cout << "Running 3 warm-up iterations for COO SpMV... \n";
+    }
+    for (int warmup = 0; warmup < 3; ++warmup) {
+        std::fill(y.begin(), y.end(), 0.0); // Reset y
+        for (int block_start = 0; block_start < nz; block_start += BLOCK_SIZE) {
+            int block_end = std::min(block_start + BLOCK_SIZE, nz);
+            #pragma omp simd
+            for (int k = block_start; k < block_end; ++k) {
+                y[row_idx[k]] += values[k] * x[col_idx[k]];
+            }
+        }
+    }
+    
     // 10 runs of SpMV multiplication
     for (int i = 0; i < 10; ++i) {
         std::fill(y.begin(), y.end(), 0.0); // reset result vector
@@ -108,7 +123,6 @@ int main(int argc, char* argv[]) {
             int block_end = std::min(block_start + BLOCK_SIZE, nz);
             #pragma omp simd
             for (int k = block_start; k < block_end; ++k) {
-                //y[row_idx[k]] += values[k]; // simplified since y is all ones
                 y[row_idx[k]] += values[k] * x[col_idx[k]];
             }
         }
@@ -117,9 +131,6 @@ int main(int argc, char* argv[]) {
         std::chrono::duration<double, std::milli> elapsed = end - start;
     
         if (verbose) {
-            for (int i = 0; i < M; ++i) {
-                std::cout << "y[" << i << "] = " << y[i] << std::endl;
-            }
             std::cout << "Multiplication took " << elapsed.count() << " ms" << std::endl;
         }
         outfile << elapsed.count() << "\n";

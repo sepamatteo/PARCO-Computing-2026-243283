@@ -120,6 +120,25 @@ int main(int argc, char* argv[]) {
         std::cerr << "Warning: unable to open exec_time file for writing \n";
     }
     
+    // 3 warm up runs
+    if (verbose) {
+        std::cout << "Running 3 warm-up iterations for CSR SpMV...\n";
+    }
+    for (int warmup = 0; warmup < 3; ++warmup) {
+        std::fill(y.begin(), y.end(), 0.0); // Reset y
+        for (int j = 0; j < M; j += BLOCK_SIZE) {
+            int j_end = std::min(j + BLOCK_SIZE, M);
+            #pragma omp simd
+            for (int r = j; r < j_end; ++r) {
+                double sum = 0.0;
+                for (int k = row_ptr[r]; k < row_ptr[r + 1]; ++k) {
+                    sum += values[k] * x[col_idx[k]];
+                }
+                y[r] = sum;
+            }
+        }
+    }
+    
     for (int i = 0; i < 10; ++i) {
         std::fill(y.begin(), y.end(), 0.0); // Reset y
         auto start = std::chrono::steady_clock::now();
@@ -140,16 +159,13 @@ int main(int argc, char* argv[]) {
         auto elapsed = std::chrono::duration<double, std::milli>(end - start);
         
         if (verbose) {
-            for (int i = 0; i < M; ++i) {
-                std::cout << "y[" << i << "] = " << y[i] << std::endl;
-            }
             std::cout << "Multiplication took " << elapsed.count() << " ms" << std::endl;
         }
         
         outfile << elapsed.count() << "\n";
     }
-    
+
     outfile.close();
-    
+
     return 0;
 }
