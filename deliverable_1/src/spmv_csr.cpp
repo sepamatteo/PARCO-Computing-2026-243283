@@ -6,6 +6,8 @@
 #include <random>
 
 #define BLOCK_SIZE 64
+#define WARMUP_ITERS 3
+#define BENCHMARK_ITERS 10
 
 extern "C" {
 #include "../include/mmio.h"
@@ -124,7 +126,7 @@ int main(int argc, char* argv[]) {
     if (verbose) {
         std::cout << "Running 3 warm-up iterations for CSR SpMV...\n";
     }
-    for (int warmup = 0; warmup < 3; ++warmup) {
+    for (int warmup = 0; warmup < WARMUP_ITERS; ++warmup) {
         std::fill(y.begin(), y.end(), 0.0); // Reset y
         for (int j = 0; j < M; j += BLOCK_SIZE) {
             int j_end = std::min(j + BLOCK_SIZE, M);
@@ -139,7 +141,7 @@ int main(int argc, char* argv[]) {
         }
     }
     
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < BENCHMARK_ITERS; ++i) {
         std::fill(y.begin(), y.end(), 0.0); // Reset y
         auto start = std::chrono::steady_clock::now();
         for (int j = 0; j < M; j += BLOCK_SIZE) {

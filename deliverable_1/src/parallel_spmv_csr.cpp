@@ -8,6 +8,8 @@
 
 #define BLOCK_SIZE 64
 #define NUM_THREADS 16
+#define WARMUP_ITERS 3
+#define BENCHMARK_ITERS 10
 
 extern "C" {
 #include "../include/mmio.h"
@@ -79,7 +81,7 @@ int main(int argc, char* argv[]) {
     }
     fclose(f);
 
-    // COO to CSR conversion
+    // ================= COO -> CSR conversion =================
     std::vector<int> row_ptr(M + 1, 0);
     std::vector<int> col_idx(nz);
     std::vector<double> values(nz);
@@ -110,18 +112,19 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < N; ++i) {
         x[i] = dis(gen);
     }
+    //
     
-    // Warm-up (3 iterations, not timed)
+    // ================= Warm-up (3 iterations, not timed) =================
     if (verbose) {
         std::cout << "Running 3 warm-up iterations for parallel CSR SpMV..." << std::endl;
     }
-    for (int i = 0; i < 3; ++i) {
-        #pragma omp parallel for
+    for (int i = 0; i < WARMUP_ITERS; ++i) {
+        #pragma omp parallel for schedule(static)
         for (int j = 0; j < M; ++j) y[j] = 0.0;
     
         #pragma omp parallel
         {
-            #pragma omp for schedule(dynamic, BLOCK_SIZE) nowait
+            #pragma omp for schedule(dynamic, BLOCK_SIZE)
             for (int r = 0; r < M; ++r) {
                 double sum = 0.0;
                 for (int k = row_ptr[r]; k < row_ptr[r+1]; ++k) {
@@ -143,7 +146,7 @@ int main(int argc, char* argv[]) {
         std::cerr << "Warning: unable to open exec_time file for writing \n";
     }
     
-    // SET THREAD COUNT
+    // ================= SET THREAD COUNT =================
     int num_threads = NUM_THREADS;
     if (getenv("OMP_NUM_THREADS") != nullptr) {
         num_threads = atoi(getenv("OMP_NUM_THREADS"));
@@ -153,9 +156,9 @@ int main(int argc, char* argv[]) {
         std::cout << "Using: " << num_threads << " threads\n";
     }
     
-    for (int i = 0; i < 10; ++i) {
-        // ====== Parallel SpMV =================
-        #pragma omp parallel for
+    for (int i = 0; i < BENCHMARK_ITERS; ++i) {
+        // ================= Parallel SpMV =================
+        #pragma omp parallel for schedule(static, BLOCK_SIZE)
         for (int j = 0; j < M; ++j) y[j] = 0.0;
         
         auto start = std::chrono::steady_clock::now();

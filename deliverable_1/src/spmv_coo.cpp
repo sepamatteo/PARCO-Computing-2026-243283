@@ -5,6 +5,8 @@
 #include <fstream>
 
 #define BLOCK_SIZE 64
+#define WARMUP_ITERS 3
+#define BENCHMARK_ITERS 10
 
 extern "C" {
 #include "../include/mmio.h"
@@ -103,7 +105,7 @@ int main(int argc, char* argv[]) {
     if (verbose) {
         std::cout << "Running 3 warm-up iterations for COO SpMV... \n";
     }
-    for (int warmup = 0; warmup < 3; ++warmup) {
+    for (int warmup = 0; warmup < WARMUP_ITERS; ++warmup) {
         std::fill(y.begin(), y.end(), 0.0); // Reset y
         for (int block_start = 0; block_start < nz; block_start += BLOCK_SIZE) {
             int block_end = std::min(block_start + BLOCK_SIZE, nz);
@@ -115,7 +117,7 @@ int main(int argc, char* argv[]) {
     }
     
     // 10 runs of SpMV multiplication
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < BENCHMARK_ITERS; ++i) {
         std::fill(y.begin(), y.end(), 0.0); // reset result vector
         auto start = std::chrono::high_resolution_clock::now();
     
