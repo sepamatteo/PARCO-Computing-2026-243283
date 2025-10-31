@@ -61,7 +61,17 @@ using
 
 1. **Using runner script**
 
-Modify and run ```src/runner.sh``` for automated multiple instance execution and benchmarking
+Run ```src/runner.sh``` for automated multiple instance execution and benchmarking
+
+**Runner script flags:**
+- ```--verbose``` enables verbose mode
+- ```--coo``` runs coo implementation
+- ```--seq-csr``` runs sequential csr implementation
+- ```--par-csr``` runs parallel csr implementation
+- ```--show-plot``` shows plot after benchmark
+- ```--cachegrind``` runs selected implementations with cachegrind monitoring
+- ```--benchmark``` runs as benchmark
+- ```--matrix``` select matrix file if not default is used
 
 2. **Manually running**
 
