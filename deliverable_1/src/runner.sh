@@ -15,12 +15,17 @@ echo ""
 
 sleep 2
 
-# default: no verbose
+# default: no verbose no plot
 VERBOSE_FLAG=""
+PLOT_FLAG=""
 
 if [ "$1" = "--verbose" ]; then
     VERBOSE_FLAG="--verbose"
     echo "Running in verbose mode"
+fi
+
+if [ "$2" = "--show-plot" ]; then
+    PLOT_FLAG="--show-plot"
 fi
 
 echo ""
@@ -39,5 +44,4 @@ export OMP_NUM_THREADS=16
 ./../outputs/parallel_spmv_csr $VERBOSE_FLAG ../data/cage14/cage14.mtx
 
 cd ../benchmarks
-#python3 script.py --show-plot
-python3 script.py
+python3 script.py $PLOT_FLAG
