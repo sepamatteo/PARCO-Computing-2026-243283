@@ -165,7 +165,7 @@ int main(int argc, char* argv[]) {
         
         #pragma omp parallel
         {
-            #pragma omp for schedule(dynamic, BLOCK_SIZE) nowait
+            #pragma omp for schedule(dynamic, BLOCK_SIZE) 
             for (int r = 0; r < M; ++r) {
                 double sum = 0.0;
                 for (int k = row_ptr[r]; k < row_ptr[r+1]; ++k) {
