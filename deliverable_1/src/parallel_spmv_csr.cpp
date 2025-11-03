@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Running 3 warm-up iterations for parallel CSR SpMV..." << std::endl;
     }
     for (int i = 0; i < WARMUP_ITERS; ++i) {
-        #pragma omp parallel for schedule(static)
+        #pragma omp parallel for schedule(static, BLOCK_SIZE)
         for (int j = 0; j < M; ++j) y[j] = 0.0;
     
         #pragma omp parallel
