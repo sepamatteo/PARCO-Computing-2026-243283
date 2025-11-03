@@ -10,6 +10,7 @@ RUN_BENCHMARK=""
 RUN_COO=""      #--coo
 RUN_SEQ_CSR=""  #--seq-csr
 RUN_PAR_CSR=""  #--par-sqr
+# TODO: add number of threads as argument
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
