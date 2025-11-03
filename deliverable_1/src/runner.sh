@@ -80,14 +80,14 @@ echo ""
 if [[ -n "$RUN_COO" ]]; then
     run_cachegrind \
         ../outputs/coo_cachegrind_output \
-        ./../outputs/spmv_coo $VERBOSE_FLAG ../data/cage14/cage14.mtx
+        ./../outputs/spmv_coo $VERBOSE_FLAG $MATRIX_FILE
         echo ""
 fi
 
 if [[ -n "$RUN_SEQ_CSR" ]]; then
     run_cachegrind \
         ../outputs/csr_cachegrind_output \
-        ./../outputs/spmv_csr $VERBOSE_FLAG ../data/cage14/cage14.mtx
+        ./../outputs/spmv_csr $VERBOSE_FLAG $MATRIX_FILE
         echo ""
 fi
 
@@ -95,7 +95,7 @@ export OMP_NUM_THREADS=16
 if [[ -n "$RUN_PAR_CSR" ]]; then
     run_cachegrind \
         ../outputs/par_csr_cachegrind_output \
-        ./../outputs/parallel_spmv_csr $VERBOSE_FLAG ../data/cage14/cage14.mtx
+        ./../outputs/parallel_spmv_csr $VERBOSE_FLAG $MATRIX_FILE
         echo ""
 fi
 
