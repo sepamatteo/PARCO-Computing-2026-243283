@@ -72,6 +72,7 @@ Run ```src/runner.sh``` for automated multiple instance execution and benchmarki
 - ```--cachegrind``` runs selected implementations with cachegrind monitoring
 - ```--benchmark``` runs as benchmark
 - ```--matrix``` select matrix file if not default is used
+- ```--threads``` select number of threads to run in the parallel csr implementation
 
 2. **Manually running**
 
