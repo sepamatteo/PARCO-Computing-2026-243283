@@ -26,7 +26,7 @@ echo "Running in: $(pwd)"
 
 mkdir -p logs
 
-cd src
+cd ../src
 
 ./runner.sh --benchmark --verbose --seq-csr --par-csr --threads 16
 #../outputs/spmv_coo ../data/cage14/cage14.mtx
