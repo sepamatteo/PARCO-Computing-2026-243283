@@ -5,12 +5,12 @@ VERBOSE_FLAG=""
 PLOT_FLAG=""
 CACHEGRIND_FLAG=""
 MATRIX_FILE="../data/cage14/cage14.mtx"     # default matrix file
-RUN_BENCHMARK=""
 RUN_COO=""      #--coo
 RUN_SEQ_CSR=""  #--seq-csr
 RUN_PAR_CSR=""  #--par-sqr
 PY_ARGS=""
 NUM_THREADS=8
+USE_PYTHON=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -21,10 +21,10 @@ while [[ $# -gt 0 ]]; do
             [[ -z "${2:-}" ]] && { echo "Error: --matrix needs a path" >&2; exit 1; }
             MATRIX_FILE="$2"; shift 2
             ;;
-        --benchmark)    RUN_BENCHMARK="1"; shift ;;
         --coo)          RUN_COO="1"; shift ;;
         --seq-csr)      RUN_SEQ_CSR="1"; shift ;;
         --par-csr)      RUN_PAR_CSR="1"; shift ;;
+        --python)       USE_PYTHON="1"; shift ;;
         --threads)
             [[ -z "${2:-}" ]] && { echo "Error: --threads needs a number" >&2; exit 1; }
             if ! [[ "$2" =~ ^[0-9]+$ ]]; then
@@ -117,4 +117,6 @@ if [[ -n "$RUN_SEQ_CSR" ]]; then PY_ARGS+=" --csr";fi
 if [[ -n "$RUN_PAR_CSR" ]]; then PY_ARGS+=" --par-cs";fi
 
 
-python3 script.py $PLOT_FLAG $PY_ARGS
+if [[ -n "$USE_PYTHON" ]]; then
+    python3 script.py $PLOT_FLAG $PY_ARGS
+fi
