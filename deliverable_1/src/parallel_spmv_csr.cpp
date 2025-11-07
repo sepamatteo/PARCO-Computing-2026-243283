@@ -13,6 +13,7 @@
 
 extern "C" {
 #include "../include/mmio.h"
+#include <valgrind/callgrind.h>
 }
 
 int main(int argc, char* argv[]) {
@@ -124,7 +125,7 @@ int main(int argc, char* argv[]) {
     
         #pragma omp parallel
         {
-            #pragma omp for schedule(static, BLOCK_SIZE)
+            #pragma omp for schedule(guided, BLOCK_SIZE)
             for (int r = 0; r < M; ++r) {
                 double sum = 0.0;
                 for (int k = row_ptr[r]; k < row_ptr[r+1]; ++k) {
@@ -156,6 +157,8 @@ int main(int argc, char* argv[]) {
         std::cout << "Using: " << num_threads << " threads\n";
     }
     
+    CALLGRIND_TOGGLE_COLLECT;
+    
     for (int i = 0; i < BENCHMARK_ITERS; ++i) {
         // ================= Parallel SpMV =================
         #pragma omp parallel for schedule(static, BLOCK_SIZE)
@@ -165,7 +168,7 @@ int main(int argc, char* argv[]) {
         
         #pragma omp parallel
         {
-            #pragma omp for schedule(static, BLOCK_SIZE) 
+            #pragma omp for schedule(guided, BLOCK_SIZE) 
             for (int r = 0; r < M; ++r) {
                 double sum = 0.0;
                 for (int k = row_ptr[r]; k < row_ptr[r+1]; ++k) {
@@ -184,6 +187,7 @@ int main(int argc, char* argv[]) {
         
         outfile << elapsed.count() << "\n";
     }
+    CALLGRIND_TOGGLE_COLLECT;
 
     outfile.close();
 

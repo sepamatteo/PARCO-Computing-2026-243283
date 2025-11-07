@@ -75,8 +75,8 @@ run_cachegrind() {
 
     if [[ -n "$CACHEGRIND_FLAG" ]]; then
         mkdir -p "$out_dir"
-        valgrind --tool=cachegrind --cache-sim=yes\
-                 --cachegrind-out-file="$out_dir/cachegrind.out" \
+        valgrind --tool=callgrind --simulate-cache=yes --collect-atstart=no --dump-instr=yes \
+                 --callgrind-out-file="$out_dir/cachegrind.out" \
                  "${cmd[@]}"
     else
         "${cmd[@]}"
