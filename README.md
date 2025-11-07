@@ -70,7 +70,7 @@ Run ```src/runner.sh``` for automated multiple instance execution and benchmarki
 - ```--par-csr``` runs parallel csr implementation
 - ```--show-plot``` shows plot after benchmark
 - ```--cachegrind``` runs selected implementations with cachegrind monitoring
-- ```--benchmark``` runs as benchmark
+- ```--python``` to run the python benchmark data analysis script
 - ```--matrix``` select matrix file if not default is used
 - ```--threads``` select number of threads to run in the parallel csr implementation
 
