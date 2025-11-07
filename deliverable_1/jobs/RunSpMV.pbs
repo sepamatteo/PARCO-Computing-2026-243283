@@ -28,7 +28,7 @@ mkdir -p logs
 
 cd ../src
 
-./runner.sh --benchmark --verbose --seq-csr --par-csr --threads 16
+./runner.sh --verbose --seq-csr --par-csr --threads 16
 #../outputs/spmv_coo ../data/cage14/cage14.mtx
 #../outputs/spmv_csr ../data/cage14/cage14.mtx
 #../outputs/parallel_spmv_csr ../data/cage14/cage14.mtx
