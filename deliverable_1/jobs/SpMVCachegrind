@@ -1,0 +1,34 @@
+#!/bin/bash
+# SpMV_cachegrind
+#PBS -N SpMV_cachegrind
+# Output files
+#PBS -o logs/spmv_cachegrind.out
+#PBS -e logs/spmv_cachegrind.err
+# Queue name
+#PBS -q short_cpuQ
+# Set the maximum wall time
+#PBS -l walltime=04:30:00
+# Number of nodes, cpus, mpi processors and amount of memory
+#PBS -l select=1:ncpus=4:mem=16gb
+
+
+
+# Modules for C
+module load gcc91
+g++() {
+    g++-9.1.0 "$@"
+}
+g++ --version
+# Select the working directory
+cd "$PBS_O_WORKDIR"   # go to the directory where qsub was run
+
+echo "Running in: $(pwd)"
+
+mkdir -p logs
+
+cd ../src
+
+./runner.sh --verbose --seq-csr --par-csr --threads 16 --cachegrind
+#../outputs/spmv_coo ../data/cage14/cage14.mtx
+#../outputs/spmv_csr ../data/cage14/cage14.mtx
+#../outputs/parallel_spmv_csr ../data/cage14/cage14.mtx
