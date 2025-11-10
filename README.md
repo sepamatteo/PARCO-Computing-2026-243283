@@ -55,7 +55,7 @@ using
 using 
 
 - ```gzip -d <matrix_name>.tar.gz```
-- ```tar -xvf <matrix_name.tar>```
+- ```tar -xvf <matrix_name>.tar```
 
 ## Usage
 
