@@ -4,7 +4,6 @@
 #include <cstdio>
 #include <fstream>
 #include <random>
-
 #include <omp.h>
 
 #define BLOCK_SIZE 64
@@ -26,6 +25,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
+    // check if verbose
     for(int i = 1; i < argc; ++i) {
         if (std::string(argv[i]) == "--verbose" || std::string(argv[i]) == "-v") {
             verbose = true;
@@ -33,17 +33,20 @@ int main(int argc, char* argv[]) {
             matrix_filename = argv[i];
         }
     }
+    // check if no matrix file is passed
     if (matrix_filename.empty()) {
         std::cerr << "No matrix file specified." << std::endl;
         return 1;
     }
+    
     // reads mtx file passed as argument
     FILE* f = fopen(matrix_filename.c_str(), "r");
     if (f == nullptr) {
         std::cerr << "Could not open file: " << matrix_filename << std::endl;
         return 1;
     }
-
+    
+    // reads matrix banner
     MM_typecode matcode;
     if (mm_read_banner(f, &matcode) != 0) {
         std::cerr << "Could not process Matrix Market banner." << std::endl;
@@ -58,6 +61,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // reads matrix size
     int M, N, nz;
     if (mm_read_mtx_crd_size(f, &M, &N, &nz) != 0) {
         std::cerr << "Could not read matrix size." << std::endl;
@@ -158,6 +162,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Using: " << num_threads << " threads\n";
     }
     
+    // toggles callgrind (set to false) collection here
     CALLGRIND_TOGGLE_COLLECT;
     
     for (int i = 0; i < BENCHMARK_ITERS; ++i) {
@@ -165,6 +170,7 @@ int main(int argc, char* argv[]) {
         #pragma omp parallel for schedule(guided, BLOCK_SIZE)
         for (int j = 0; j < M; ++j) y[j] = 0.0;
         
+        // starts timing
         auto start = std::chrono::steady_clock::now();
         
         #pragma omp parallel
@@ -179,15 +185,17 @@ int main(int argc, char* argv[]) {
             }
         }
         // =====================================
+        // stops timing
         auto end = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration<double, std::milli>(end - start);
         
         if (verbose) {
             std::cout << "Multiplication took " << elapsed.count() << " ms" << std::endl;
         }
-        
+        // writes to benchmark file
         outfile << elapsed.count() << "\n";
     }
+    // toggles callgrind collect (set to true) here
     CALLGRIND_TOGGLE_COLLECT;
 
     outfile.close();
