@@ -90,6 +90,8 @@ There are 3 PBS scripts in the ```/jobs``` directory:
 - ```RunSpMV.pbs``` runs the multiplication and benchmark using the ```runner.sh``` script, modify the arguments passed to the script to adjust the running parameters
 - ```SpMVCachegrind``` runs with cachegrind for cache miss analysis
 
+Run the desired script using ```qsub <scriptName>.pbs```
+
 ## License
 
 This project is licensed under the GPL-3.0 License.
