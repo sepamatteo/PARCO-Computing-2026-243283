@@ -57,6 +57,10 @@ using
 - ```gzip -d <matrix_name>.tar.gz```
 - ```tar -xvf <matrix_name>.tar```
 
+## Documentation
+
+The PDF report is available in the ```/docs``` directory
+
 ## Usage
 
 1. **Using runner script**
@@ -77,6 +81,14 @@ Run ```src/runner.sh``` for automated multiple instance execution and benchmarki
 2. **Manually running**
 
 Manually run ```/outputs/<executable> ../data/<matrix_name>/<matrix_name>.mtx```
+
+## Running on the cluster
+
+There are 3 PBS scripts in the ```/jobs``` directory:
+
+- ```CompileSpMV.pbs``` compiles and links the source using the MAKEFILE
+- ```RunSpMV.pbs``` runs the multiplication and benchmark using the ```runner.sh``` script, modify the arguments passed to the script to adjust the running parameters
+- ```SpMVCachegrind``` runs with cachegrind for cache miss analysis
 
 ## License
 
