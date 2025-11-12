@@ -125,12 +125,12 @@ int main(int argc, char* argv[]) {
         std::cout << "Running 3 warm-up iterations for parallel CSR SpMV..." << std::endl;
     }
     for (int i = 0; i < WARMUP_ITERS; ++i) {
-        #pragma omp parallel for schedule(guided, BLOCK_SIZE)
+        #pragma omp parallel for schedule(dynamic, BLOCK_SIZE)
         for (int j = 0; j < M; ++j) y[j] = 0.0;
     
         #pragma omp parallel
         {
-            #pragma omp for schedule(guided, BLOCK_SIZE)
+            #pragma omp for schedule(dynamic, BLOCK_SIZE)
             for (int r = 0; r < M; ++r) {
                 double sum = 0.0;
                 for (int k = row_ptr[r]; k < row_ptr[r+1]; ++k) {
@@ -167,7 +167,7 @@ int main(int argc, char* argv[]) {
     
     for (int i = 0; i < BENCHMARK_ITERS; ++i) {
         // ================= Parallel SpMV =================
-        #pragma omp parallel for schedule(guided, BLOCK_SIZE)
+        #pragma omp parallel for schedule(dynamic, BLOCK_SIZE)
         for (int j = 0; j < M; ++j) y[j] = 0.0;
         
         // starts timing
@@ -175,7 +175,7 @@ int main(int argc, char* argv[]) {
         
         #pragma omp parallel
         {
-            #pragma omp for schedule(guided, BLOCK_SIZE) 
+            #pragma omp for schedule(dynamic, BLOCK_SIZE) 
             for (int r = 0; r < M; ++r) {
                 double sum = 0.0;
                 for (int k = row_ptr[r]; k < row_ptr[r+1]; ++k) {
