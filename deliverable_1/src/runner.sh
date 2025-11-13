@@ -101,8 +101,6 @@ if [[ -n "$RUN_SEQ_CSR" ]]; then
 fi
 
 export OMP_NUM_THREADS=$NUM_THREADS
-export OMP_PROC_BIND=close
-export OMP_PLACES=cores
 if [[ -n "$RUN_PAR_CSR" ]]; then
     run_cachegrind \
         ../outputs/par_csr_cachegrind_output \
