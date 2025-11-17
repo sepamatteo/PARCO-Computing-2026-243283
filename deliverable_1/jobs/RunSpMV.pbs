@@ -7,9 +7,9 @@
 # Queue name
 #PBS -q short_cpuQ
 # Set the maximum wall time
-#PBS -l walltime=0:10:00
+#PBS -l walltime=04:30:00
 # Number of nodes, cpus, mpi processors and amount of memory
-#PBS -l select=1:ncpus=4:mem=16gb
+#PBS -l select=1:ncpus=64:mem=32gb
 
 
 
@@ -28,7 +28,8 @@ mkdir -p logs
 
 cd ../src
 
-./runner.sh --verbose --seq-csr --par-csr --threads 16
-#../outputs/spmv_coo ../data/cage14/cage14.mtx
-#../outputs/spmv_csr ../data/cage14/cage14.mtx
-#../outputs/parallel_spmv_csr ../data/cage14/cage14.mtx
+MATRIX="../data/cage14/cage14.mtx"
+
+./runner.sh --verbose --seq-csr --par-csr --threads 16 --matrix $MATRIX
+./runner.sh --verbose --par-csr --threads 32 --matrix $MATRIX
+./runner.sh --verbose --par-csr --threads 64 --matrix $MATRIX
