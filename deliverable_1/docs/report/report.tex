@@ -1,0 +1,491 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{balance}
+\usepackage{algorithm,algpseudocode}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{inconsolata}
+\usepackage{calc}
+\usepackage{caption}
+\usepackage[T1]{fontenc}
+\usepackage{adjustbox}
+\usepackage{float}
+\usepackage{multirow}
+
+\lstset{
+  language=C++,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{green!60!black}\itshape,
+  numberstyle=\tiny\color{gray},
+  numbers=left,
+  numbersep=8pt,
+  backgroundcolor=\color{gray!5},
+  frame=single,
+  rulecolor=\color{black!30},
+  frameround=tttt,
+  tabsize=2,
+  breaklines=true,
+  breakatwhitespace=true,
+  prebreak=\mbox{\textcolor{gray}{$\hookleftarrow$}},
+  postbreak=\mbox{\textcolor{gray}{$\hookrightarrow$}\space},
+  breakindent=0pt,
+  columns=flexible,
+  keepspaces=true,
+  showstringspaces=false,
+  xleftmargin=0pt,
+  xrightmargin=0pt,
+  framexleftmargin=0pt,           
+  framexrightmargin=0pt,
+  resetmargins=true,              
+  framesep=3pt,                   
+  framerule=0.4pt,                
+  aboveskip=6pt,
+  belowskip=6pt,
+  captionpos=b
+}
+
+
+\begin{document}
+
+\title{Deliverable 1: Sparse Matrix-Vector Multiplication}
+
+\author{\IEEEauthorblockN{Sepa Matteo (243283)}
+\IEEEauthorblockA{\textit{Course: Introduction to Parallel Computing (2025–2026)} \\
+\textit{University of Trento}\\
+matteo.sepa@studenti.unitn.it \\
+\href{https://github.com/sepamatteo/PARCO-Computing-2026-243283}{github.com/sepamatteo/PARCO-Computing-2026-243283}}}
+
+
+\maketitle
+
+\begin{abstract}
+This report presents a study of shared-memory parallelization of sparse matrix-vector multiplication (SpMV). We implement and benchmark SpMV using Compressed Sparse Row (CSR). The implementations are written in C++ and parallelized using OpenMP. We evaluate their performance on a real-world matrix from the SuiteSparse collection. Our results show that, the parallel CSR implementation highly beats the sequential one. This report details our implementations, benchmarking methodology, and the analysis of the performance results. The project, including source code and scripts for reproducibility, is available on GitHub.
+\end{abstract}
+
+\begin{IEEEkeywords}
+SpMV, sparse matrices, OpenMP, parallel computing, CSR, COO, SIMD, vectorization, performance analysis.
+\end{IEEEkeywords}
+
+\section{Introduction}
+Sparse matrix-vector multiplication (SpMV), the operation $y = Ax$ where $A$ is a sparse matrix and $x$ a monodimensional vector, is a fundamental kernel in many scientific and engineering applications. Its performance is critical for a wide range of domains. The efficiency of SpMV is highly dependent on the data structure used to store the sparse matrix, as it affects memory access patterns and computational efficiency~\cite{bandwidth_paper}.
+
+This project focuses on the implementation and performance analysis of SpMV using the popular sparse matrix format:
+\begin{itemize}
+    \item \textbf{Compressed Sparse Row (CSR):} A more compact format that enables efficient row-wise access to the matrix elements.
+\end{itemize}
+
+We develop sequential and parallel implementations of SpMV in C++ and use OpenMP for shared-memory parallelization. We conduct a comparative performance analysis of these implementations on a real-world large-scale sparse matrix and compare the result from a regular machine (i7-7700k, 16GB of RAM) and the HPC cluster. This report presents our methodology, experimental setup, performance results, and an in-depth discussion of the observed performance characteristics.
+
+\section{Methodology}
+\label{sec:method}
+The SpMV kernels is implemented in C++11 while we use the ANSI C library for Matrix Market I/O for matrix reading ~\cite{b1}. We use \texttt{chrono::steady\_clock} from the \texttt{chrono} library for highly precise monotonic clock.
+We also randomly generate the vector to multiply with the matrix using the \texttt{random} library
+
+\subsection{Sparse Storage Formats}
+\subsubsection{Coordinate (COO)}
+The COO format stores each non-zero element as a triplet \texttt{(r, c, v)}, where \texttt{r} is the row index, \texttt{c} is the column index, and \texttt{v} is the value. These triplets are stored in three separate arrays: \texttt{row\_idx}, \texttt{col\_idx}, and \texttt{values}. The SpMV operation in COO format is implemented by iterating over the non-zero elements and performing the update \texttt{y[row\_idx[k]]} += \texttt{values[k]} $\cdot$ \texttt{x[col\_idx[k]]}. To improve performance, we process the non-zero elements in blocks and use \texttt{\#pragma omp simd} to encourage \textbf{vectorization} of the inner loop.
+
+\subsubsection{Compressed Sparse Row (CSR)}
+The CSR format uses three arrays: \texttt{values}, \texttt{col\_idx}, and \texttt{row\_ptr}. The \texttt{values} and \texttt{col\_idx} arrays store the non-zero values and their corresponding column indices, ordered by row. The \texttt{row\_ptr} array stores the starting index of each row in the \texttt{values} and \texttt{col\_idx} arrays. The SpMV operation in CSR format involves iterating through each row \texttt{i}, and for each row, iterating through its non-zero elements from \texttt{row\_ptr[i]} to \texttt{row\_ptr[i+1]-1}.
+
+Our implementation includes a COO-to-CSR conversion step. This involves counting the number of non-zero elements in each row, computing the prefix sum to determine the row pointers, and then populating the \texttt{values} and \texttt{col\_idx} arrays.
+
+\subsection{Sequential CSR SpMV}
+Firstly we implement a standard conversion from COO format to CSR format for a sparse matrix with \texttt{M} \textbf{rows} and \texttt{nz} \textbf{non-zero elements}. COO stores non-zero entries as separate lists of row indices, column indices, and values, while CSR compresses the data using a row pointer array, column indices array, and values array for efficient row-wise access.\\
+\textbf{Key Steps in the conversion};
+\begin{itemize}
+    \item \textbf{Count Non-Zeros per Row}: Initialize a \texttt{row\_ptr} array of size \texttt{M+1} to zero. For each COO entry, increment \texttt{row\_ptr[row\_coo[i] + 1]} to tally non-zeros in each row.
+    \item \textbf{Compute Prefix Sums}: Perform a cumulative sum on \texttt{row\_ptr} so that \texttt{row\_ptr[i]} indicates the starting index in the column indices and values arrays for row \texttt{i} and \texttt{row\_ptr[M]} equals \texttt{nz}.
+    \item \textbf{Fill Column Indices and Values}: Create a temporary fill array copying the initial \texttt{row\_ptr} values, serving as pointers to the current position in each row's segment. Iterate through COO entries in order, placing the column index (\texttt{col\_coo[i]}) and value (\texttt{val\_coo[i]}) into \texttt{col\_idx} and \texttt{values} at position \texttt{fill[row\_coo[i]]}, then increment the pointer for that row. This ensures entries are sorted by row without explicit sorting
+    
+\end{itemize}
+This process achieves \texttt{O(nz)} time complexity and preserves the original entry order within rows, enabling fast matrix-vector multiplications in CSR format. The input file uses 1-based indexing, which is adjusted to 0-based for internal use.
+
+
+\begin{lstlisting}[caption={Sequential CSR SpMV Kernel}]
+for (int i = 0; i < BENCHMARK_ITERS; ++i) { // BENCHMARK_ITERS=10
+    std::fill(y.begin(), y.end(), 0.0); // Reset y
+    auto start = std::chrono::steady_clock::now(); // starting measurment
+    for (int j = 0; j < M; j += BLOCK_SIZE) {
+        int j_end = std::min(j + BLOCK_SIZE, M);
+        #pragma omp simd
+        for (int r = j; r < j_end; ++r) {
+            double sum = 0.0;
+            #pragma omp simd reduction(+:sum)
+            for (int k = row_ptr[r]; k < row_ptr[r + 1]; ++k) {
+                sum += values[k] * x[col_idx[k]];
+            }
+            y[r] = sum;
+        }
+    }
+    auto end = std::chrono::steady_clock::now(); // ending measurment
+    auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+\end{lstlisting}
+This code applies \textbf{SIMD vectorization} to accelerate the SpMV computation in CSR format. SIMD (Single Instruction Multiple Data) enables simultaneous execution of the same operation on multiple data points, leveraging wide vector registers in modern CPUs.\\
+The \texttt{reduction} clause for SIMD vectorizes accumulation operations by giving each SIMD lane a private copy of the sum variable and combining results at loop end, guaranteeing \textbf{correctness}.
+
+
+\subsection{Parallel CSR SpMV Implementation with OpenMP}
+We use OpenMP to parallelize the SpMV computation.
+\begin{itemize}
+    \item \textbf{Parallel CSR-SpMV:} The parallelization is done over the rows of the matrix. We use an OpenMP parallel for loop with a different schedules to distribute the rows among the threads.
+
+    \begin{lstlisting}[caption={Parallel SpMV Kernel}]
+// BLOCK_SIZE=12; BENCHMARK_ITERS=10; 
+for (int i = 0; i < BENCHMARK_ITERS; ++i) {
+        auto start = std::chrono::steady_clock::now(); // start timing
+        #pragma omp parallel
+        {
+            #pragma omp for schedule(static) nowait
+            for (int i = 0; i < M; i++) {
+                y[i] = 0.0;
+            }
+            #pragma omp for schedule(guided, BLOCK_SIZE) nowait
+            for (int r = 0; r < M; ++r) {
+                double sum = 0.0;
+                #pragma omp simd reduction(+:sum)
+                for (int k = row_ptr[r]; k < row_ptr[r+1]; ++k) {
+                    sum += values[k] * x[col_idx[k]];
+                }
+                y[r] = sum;
+            }
+        } // implicit barrier here 
+        auto end = std::chrono::steady_clock::now(); // stop timing
+        auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+    \end{lstlisting}
+
+\end{itemize}
+
+\section{Experiments}
+\label{sec:exp}
+
+\subsection{System Description}
+The experiments were conducted on a system with the following specifications:
+\begin{itemize}
+    \item \textbf{Compiler:} GCC (g++) 9.1.0
+    \item \textbf{Compiler Flags:} \texttt{-O3 -std=c++11 -Wall -fopenmp -ffast-math -march=native}
+\end{itemize}
+
+\subsection{Dataset}
+We used the different matrices from the SuiteSparse Matrix Collection~\cite{b2} with different sizes and Non-zero elements:
+
+\begin{itemize}
+    \item \textbf{1138\_bus $1,138 \times 1,138$} \texttt{matrix with $4,054$} \textbf{non-zeroes} \cite{b3}
+    \item \textbf{bcsstk18 $11,948 \times 11,948$} \texttt{matrix with $149,090$} \textbf{non-zeroes} \cite{b4}
+    \item \textbf{cage14 $1,505,785 \times 1,505,785$} \texttt{matrix with $27,130,349$} \textbf{non-zeroes} \cite{b5}
+    \item \textbf{nlpkkt160 $8,345,600 \times 8,345,600$} \texttt{matrix with $225,422,112$} \textbf{non-zeroes} \cite{b6}
+    \item \textbf{Queen\_4147 $4,147,110 \times 4,147,110$} \texttt{matrix with $316,548,962$} \textbf{non-zeroes} \cite{b7}
+\end{itemize}
+
+\subsection{Benchmarking Methodology}
+The benchmarks were executed using the \texttt{src/runner.sh} script. For each implementation (COO, sequential CSR, parallel CSR), the script performs 3 warm-up runs followed by 10 timed runs. The execution times of the timed runs are recorded in text files in the \texttt{benchmarks} directory. A Python script, \texttt{benchmarks/script.py}, can be used to calculate the average execution time and 90th percentile and generate a plot of the results.
+We ran the HPC benchmark on the \texttt{short\_cpuQ}
+
+\section{Results and Discussion}
+\label{sec:results}
+
+The 90th-percentile execution times for the CSR-based SpMV kernels are reported in
+Table~\ref{tab:perf_pc} (desktop PC, i7-7700K) and Table~\ref{tab:perf_hpc} (HPC cluster).
+Figure~\ref{fig:pc_bench} visualises both the results on a logarithmic scale.\par
+
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=\linewidth]{images/spmv_benchmark_comparison_pc_hpc.png}
+    \caption{SpMV 90th percentile execution time on PC and HPC (log scale).}
+    \label{fig:pc_bench}
+\end{figure}
+
+\begin{table}[!t]
+\caption{Performance of parallel CSR SpMV on \textbf{i7-7700k}(90th-percentile time over 10 runs). 
+         GFLOPS and effective bandwidth (GB/s) refer to the best observed 
+         configuration}
+\label{tab:perf_pc}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrr}
+\toprule
+\multirow{2}{*}{Matrix} & 
+\multicolumn{4}{c}{Time (ms)} & 
+\multirow{2}{*}{\textbf{GFLOPs}} & 
+\multirow{2}{*}{\textbf{GB/s}} \\
+\cmidrule(lr){2-5}
+ & Seq   & 4 thr & 8 thr & 16 thr &  &  \\
+\midrule
+1138\_bus     & 0.0078 & 0.0054 & 0.0038 & 0.0985 & 0.11 &   1.090 \\
+bcsstk18      & 0.1112 & 0.0428 & 0.0259 & 0.1506 & 3.29 &  23.64 \\
+cage14        & 27.427 & 19.608 & 19.368 & 17.839 & 2.32 & 14.98 \\
+nlpkkt160     & 90.554 & 60.966 & 63.009 & 61.798 & 2.80 & 18.39 \\
+Queen\_4147   & 123.30 & 78.198 & 76.841 & 76.085 & 3.41 & 21.16 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!t]
+\caption{Performance of parallel CSR SpMV on \textbf{HPC Cluster} (90th-percentile time over 10 runs). 
+         GFLOPS and effective bandwidth refer to the best observed configuration}
+\label{tab:perf_hpc}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4.8pt}
+\begin{tabular}{lrrrrrr}
+\toprule
+\multirow{2}{*}{Matrix} & 
+\multicolumn{4}{c}{Time (ms)} & 
+\multirow{2}{*}{\textbf{GFLOPs}} & 
+\multirow{2}{*}{\textbf{GB/s}} \\
+\cmidrule(lr){2-5}
+ & Seq    & 16 thr & 32 thr & 64 thr &  &  \\
+\midrule
+1138\_bus     & 0.0362 & 0.0304 & 0.0403 & 0.0629 & 0.21  &   2.040 \\
+bcsstk18      & 0.1421 & 0.0610 & 0.0985 & 0.1750 & 3.58   &  25.71 \\
+cage14        & 34.461 & 6.6561 & 5.6460 & 5.4590 & 5.12  & 33.02   \\
+nlpkkt160     & 141.16 & 31.910 & 31.816 & 25.836 & 4.54   & 29.80  \\
+Queen\_4147   & 414.30 & 31.802 & 33.905 & 25.780 & 4.84   & 30.02  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Overall Speed-up Trends}
+
+On the \textbf{desktop PC}, parallel CSR yields a \texttt{2-3x} speed-up with 4 threads and
+reaches \texttt{approximately 3--4×} at 8 threads for the larger matrices
+(\texttt{cage14}, \texttt{nlpkkt160}, \texttt{Queen\_4147}).\par 
+The 16-thread configuration occasionally regresses (e.g., \texttt{1138\_bus} jumps from
+0.0038\,ms at 8 threads to 0.0985\,ms) because the matrix is too small to
+compensate for OpenMP overhead and cache thrashing. \par
+
+On the \textbf{HPC cluster}, the sequential baseline is \textbf{markedly slower} than the PC
+(e.g., \texttt{414 ms} vs. \texttt{123 ms} for \texttt{Queen\_4147}).\par 
+Parallel execution at 16 threads delivers \texttt{5-13x} speed-up, peaking at \textbf{approximately} \texttt{16×} for
+\texttt{Queen\_4147} when moving to \textbf{64 threads}.\par
+
+\subsection{Matrix-Specific Scaling Behaviour}
+
+\begin{itemize}
+    \item \textbf{Small, highly sparse matrices} (\texttt{1138\_bus}, \texttt{bcsstk18})
+  benefit modestly up to 8 threads on the PC but degrade sharply beyond that
+  because the work per row is insufficient to amortize thread creation and
+  scheduling costs. This behavior is consistent with findings that static 
+scheduling fails to handle irregular row distributions effectively~\cite{reordering_paper}.
+
+    \item 
+    \textbf{Medium-to-large irregular matrices} (\texttt{cage14}) show excellent
+  scaling on the HPC node (approximately \texttt{6x} from sequential to 64 threads) once
+  enough threads are available to mask memory latency.  On the PC, scaling
+  plateaus after 8 threads owing to limited core count.
+    \item \textbf{Dense, regular problems} (\texttt{nlpkkt160}, \texttt{Queen\_4147})
+  exhibit the most consistent gains: approximately \texttt{1.5×} per doubling of threads
+  on the PC up to 8 cores, and a clear progression from 16 → 32 → 64 threads on
+  the HPC, culminating in \textbf{approximately 16×} overall speed-up for
+  \texttt{Queen\_4147}.
+\end{itemize}
+
+\subsection{Thread Scaling Behavior on HPC}
+
+Although tested up to 64 OpenMP threads, \textbf{peak performance} occurs at \texttt{16} to \texttt{32} \textbf{threads} for most matrices.  
+The two largest problems show continued improvement to \texttt{64} threads, but gains diminish.
+
+This plateau is consistent with \textbf{memory-bound behavior}~\cite{bandwidth_paper}:   SpMV performs one FLOP per two irregular memory references.  
+Once available memory bandwidth is saturated, additional threads increase contention without improving throughput.  
+The dynamic scheduling policy (\texttt{dynamic,64}) incurs growing overhead at high thread counts due to frequent chunk allocation.
+
+\subsection{Scheduling}
+\label{subsec:scheduling}
+
+The row-wise parallelisation of CSR-SpMV is inherently \textbf{load imbalanced} because the number of non-zero elements per row varies widely in real-world matrices. 
+OpenMP provides several \texttt{schedule} clauses to distribute loop iterations among threads~\cite{reordering_paper}.
+
+\begin{table}[H]
+\centering
+\caption{OpenMP scheduling strategies for CSR-SpMV row parallelisation.}
+\label{tab:sched}
+\begin{adjustbox}{max width=\columnwidth}
+\begin{tabular}{l l l l}
+\toprule
+\textbf{Schedule} &
+\textbf{Chunk size} &
+\textbf{Work distribution} &
+\textbf{Overhead} \\
+\midrule
+\textbf{static} &
+fixed at compile time \\
+(default = $M$/threads) &
+deterministic, no runtime cost &
+poor for irregular row lengths \\[4pt]
+
+\textbf{dynamic} &
+user-defined (e.g.\ 64) &
+threads request chunks when idle &
+high (lock + scheduling) \\[4pt]
+
+\textbf{guided} &
+starts large, shrinks exponentially &
+self-balancing &
+moderate, adaptive \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\subsubsection{Experimental evaluation of static scheduling}
+\label{subsubsec:static_eval}
+
+We executed the CSR-SpMV kernel on the \texttt{Queen\_4147} matrix
+($4{,}147{,}110 \times 4{,}147{,}110$, 316 M non-zeros) with the
+\textbf{static} OpenMP schedule (chunk size 64).  
+Ten timed runs were performed after three warm-up iterations on an HPC node.
+
+\noindent
+Table~\ref{tab:sched} summarises the three classic policies.  
+In our experiments the \texttt{guided} schedule gave the best trade-off between load-balance and overhead.
+
+\begin{table}[H]
+\centering
+\caption{90th-percentile execution time (ms) with \texttt{static} schedule on Queen\_4147.}
+\label{tab:static_queen}
+\begin{tabular}{l r}
+\toprule
+Implementation          & 90th percentile (ms) \\
+\midrule
+Sequential CSR          & 279.2 \\
+Parallel (16 thr)       &  71.6 \\
+Parallel (32 thr)       & 114.3 \\
+Parallel (64 thr)       & 535.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Observation.}  
+Static scheduling yields a respectable \texttt{3.9x} speedup at \texttt{16 threads}
+(\texttt{279.2 ms → 71.6 ms}).  
+Increasing the thread count to \texttt{32 threads} \textbf{regresses} performance
+because the fixed chunk assignment cannot cope with the highly irregular
+row lengths of \texttt{Queen\_4147}; a few threads finish early while others
+process rows with \texttt{>100 k} non-zeros.  
+At 64 threads the overhead of thread creation and severe load imbalance
+cause a \textbf{dramatic slowdown}.
+This confirms that \texttt{static} is unsuitable for large irregular matrices
+and motivates the use of adaptive policies such as \texttt{guided}~\cite{reordering_paper}.
+
+\subsection{Impact of Scheduling on Cache Behavior}
+
+\label{subsubsec:callgrind}
+
+We profiled the parallel CSR-SpMV kernel (32 threads, \texttt{guided} schedule) on the \texttt{cage14} matrix using Valgrind/Callgrind with full cache simulation:
+To quantify the effect of OpenMP scheduling on cache efficiency, we repeated the Callgrind profiling of one full SpMV iteration on the \texttt{cage14} matrix using exactly the same binary and 32 threads, differing only in the schedule.
+
+We only profiled the SpMV Kernel using callgrind with the flags : \texttt{-{}-tool=callgrind -{}-simulate-cache=yes -{}-collect-atstart=no -{}-dump-instr=yes} and these callgrind toggles before and right after the SpMV Kernel.
+\begin{lstlisting}[caption={Callgrind activation in SpMV Kernel}]
+CALLGRIND_TOGGLE_COLLECT;
+// .. SpMV Kernel Here
+CALLGRIND_TOGGLE_COLLECT;
+\end{lstlisting}
+
+Key cache statistics:
+
+\begin{table}[H]
+\centering
+\caption{Callgrind cache statistics for \texttt{cage14} (16 threads, one SpMV iteration).}
+\label{tab:callgrind_sched_comparison}
+\begin{tabular}{l r r r}
+\toprule
+Metric & \texttt{guided} & \texttt{static} & Difference \\
+\midrule
+Instruction references (Ir)      & 95.1 M  & 63.9 M  & $-33\%$ \\
+Data references (Dr+Dw)          & 44.5 M  & 29.5 M  & $-34\%$ \\
+D1 misses (total)                & 3.75 M  & 2.87 M  & $-24\%$ \\
+D1 miss rate                     & 8.4\%   & 9.7\%   & $+15\%$ \\
+\textbf{LL misses (total)}       & \textbf{2.79 M} & \textbf{1.94 M} & $-30\%$ \\
+\textbf{LL miss rate}            & \textbf{6.3\%}  & \textbf{6.6\%}  & $+5\%$ \\
+LL write miss rate               & 15.3\%  & 15.0\%  & $\approx$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+\textbf{Key observations:}
+
+\begin{itemize}
+    \item The \texttt{static} schedule executes \textbf{fewer instructions and memory references} (approximately one-third less) because \textbf{severe load imbalance} causes many threads to finish early and sit idle — the effective work is done by only a few heavily loaded threads.
+    \item Despite doing less total work, the \textbf{D1 miss rate increases from} \texttt{8.4\% to 9.7\%} and the \textbf{LL miss rate rises from} \texttt{6.3\% to 6.6\%}. This occurs because the same hot rows are repeatedly processed by the same threads, destroying temporal locality in the \texttt{values} and \texttt{col\_idx} arrays.
+    \item Write-related false sharing (approximately \texttt{15-{}-17\%} D1 write misses) remains essentially unchanged — both schedules suffer from concurrent writes to nearby elements of \texttt{y}.
+    \item Overall, \texttt{guided} scheduling incurs \textbf{approximately 30\% more cache misses} but distributes work evenly, yielding \textbf{significantly lower wall-clock time}.
+\end{itemize}
+
+\noindent
+\textbf{Interpretation:}
+
+\begin{itemize}
+    \item The kernel executes approximately \textbf{95 M instructions} and approximately \textbf{44 M data references} per SpMV — consistent with approximately \texttt{1.6-{}-2} memory operations per non-zero.
+    \item The \textbf{last-level cache miss rate of 6.3\%} (approximately 2.8 M compulsory/capacity misses) is the dominant performance limiter.  
+      Each LL miss costs approximately \texttt{200-{}-250 cycles} $\rightarrow$ approximately \texttt{560-{}-700 million} cycles spent waiting for memory.
+    \item Arithmetic intensity is extremely low (approximately \texttt{0.05-{}-0.06 FLOP/byte}), making SpMV \textbf{strongly memory-bound}~\cite{bandwidth_paper} — performance scales with memory bandwidth, not core count, beyond approximately \texttt{16-{}-32 threads}.
+\end{itemize}
+
+This confirms that \texttt{static} scheduling trades lower absolute miss counts for dramatically worse load balance and higher miss rates per operation, making \texttt{guided} (or \texttt{dynamic}) the clearly superior choice for irregular matrices such as \texttt{cage14}.
+
+\section{Conclusion}
+\label{sec:conc}
+
+We successfully implemented and benchmarked sequential and parallel SpMV kernels using the CSR format on both a desktop PC (i7-7700K) and an HPC cluster node. The results provide clear insights into the effectiveness of shared-memory parallelization with OpenMP:
+
+\begin{itemize}    
+    \item \textbf{OpenMP parallelization delivers substantial speedups}, achieving up to \textbf{4--6×} on well-balanced, large matrices (\texttt{nlpkkt160}, \texttt{Queen\_4147}) with 8--16 threads. However, small or highly irregular matrices (\texttt{1138\_bus}, \texttt{cage14}) show limited scaling or even performance degradation at high thread counts due to load imbalance and parallel overhead.
+    
+    \item \textbf{Single-thread performance is critical}: The HPC node exhibits \textbf{significantly slower sequential execution} than the desktop CPU, inflating parallel efficiency metrics. This highlights that \textbf{speedup alone is misleading} without considering baseline performance.
+    
+    \item \textbf{Load balancing and matrix structure dominate scalability}: The best scaling is observed on dense, regular problems; irregular sparsity patterns (e.g., \texttt{cage14} at 32 threads) lead to severe underutilization despite increased parallelism.
+\end{itemize}
+
+Overall, while OpenMP enables effective parallelization of CSR-based SpMV on shared-memory systems, \textbf{achieving consistent high performance requires careful consideration of matrix properties, thread scheduling, and underlying hardware characteristics}.
+
+\bibliographystyle{IEEEtran}
+\begin{thebibliography}{00}
+
+\bibitem{b1}
+\href{https://math.nist.gov/MatrixMarket/mmio-c.html}{ANSI C library for Matrix Market I/O}
+
+\bibitem{b2}
+\href{https://sparse.tamu.edu/}{The SuiteSparse Matrix Collection}
+
+\bibitem{b3}
+\href{https://sparse.tamu.edu/HB/1138_bus}{1138\_bus matrix}
+
+\bibitem{b4}
+\href{https://sparse.tamu.edu/HB/bcsstk18}{bcsstk18 matrix}
+
+\bibitem{b5}
+\href{https://sparse.tamu.edu/vanHeukelum/cage14}{cage14 matrix}
+
+\bibitem{b6}
+\href{https://sparse.tamu.edu/Schenk/nlpkkt160}{nlpkkt160 matrix}
+
+\bibitem{b7}
+\href{https://sparse.tamu.edu/Janna/Queen_4147}{Queen\_4147 matrix}
+
+\bibitem{b8}
+ Intro to Parallel Computing – Report and project preparation
+(course guide, accessed Nov 10, 2025).
+
+\bibitem{reordering_paper}
+O. Asudeh et al., "Is Sparse Matrix Reordering Effective for Sparse Matrix-Vector 
+Multiplication?" arXiv:2506.10356 [cs.DC], Jun. 2025.
+
+\bibitem{bandwidth_paper}
+Z. Gu, J. Moreira, D. Edelsohn, and A. Azad, "Bandwidth-Optimized Parallel Algorithms 
+for Sparse Matrix-Matrix Multiplication using Propagation Blocking," 
+arXiv:2002.11302 [cs.DC], Feb. 2020.
+
+\end{thebibliography}
+
+\balance
+\end{document}
