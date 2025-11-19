@@ -6,7 +6,7 @@
 #include <random>
 #include <omp.h>
 
-#define BLOCK_SIZE 64
+#define BLOCK_SIZE 10
 #define NUM_THREADS 16
 #define WARMUP_ITERS 3
 #define BENCHMARK_ITERS 10
@@ -125,14 +125,15 @@ int main(int argc, char* argv[]) {
         std::cout << "Running 3 warm-up iterations for parallel CSR SpMV..." << std::endl;
     }
     for (int i = 0; i < WARMUP_ITERS; ++i) {
-        #pragma omp for schedule(guided, BLOCK_SIZE)
-        for (int j = 0; j < M; ++j) y[j] = 0.0;
-        
         #pragma omp parallel
         {
-            #pragma omp for schedule(guided, BLOCK_SIZE)
+            #pragma omp for schedule(static) nowait
+            for (int i = 0; i < M; ++i) y[i] = 0.0;
+            
+            #pragma omp for schedule(guided, BLOCK_SIZE) nowait
             for (int r = 0; r < M; ++r) {
                 double sum = 0.0;
+                #pragma omp simd reduction(+:sum)
                 for (int k = row_ptr[r]; k < row_ptr[r+1]; ++k) {
                     sum += values[k] * x[col_idx[k]];
                 }
@@ -165,19 +166,25 @@ int main(int argc, char* argv[]) {
     // toggles callgrind (set to false) collection here
     CALLGRIND_TOGGLE_COLLECT;
     
+    //for (int j = 0; j < M; ++j) y[j] = 0.0;
+    
     for (int i = 0; i < BENCHMARK_ITERS; ++i) {
         // ================= Parallel SpMV =================
         // starts timing
         auto start = std::chrono::steady_clock::now();
         
-        #pragma omp for schedule(guided, BLOCK_SIZE)
-        for (int j = 0; j < M; ++j) y[j] = 0.0;
-        
         #pragma omp parallel
         {
-            #pragma omp for schedule(guided, BLOCK_SIZE) 
+            #pragma omp for schedule(static) nowait
+            for (int i = 0; i < M; i++) {
+                y[i] = 0.0;
+            }
+            
+            #pragma omp for schedule(guided, BLOCK_SIZE) nowait
             for (int r = 0; r < M; ++r) {
                 double sum = 0.0;
+                
+                #pragma omp simd reduction(+:sum)
                 for (int k = row_ptr[r]; k < row_ptr[r+1]; ++k) {
                     sum += values[k] * x[col_idx[k]];
                 }
