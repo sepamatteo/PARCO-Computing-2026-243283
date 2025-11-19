@@ -5,6 +5,9 @@
 #include <fstream>
 #include <random>
 #include <omp.h>
+#include <algorithm>
+#include <iomanip>
+#include <fstream>
 
 #define BLOCK_SIZE 10
 #define NUM_THREADS 16
@@ -206,6 +209,39 @@ int main(int argc, char* argv[]) {
     CALLGRIND_TOGGLE_COLLECT;
 
     outfile.close();
+    
+    if (verbose) {
+        std::vector<double> times_ms(BENCHMARK_ITERS);
+        std::ifstream times_file("../benchmarks/Parallel_CSR_exec_times.txt");
+        for (int i = 0; i < BENCHMARK_ITERS; ++i) {
+            times_file >> times_ms[i];
+        }
+        times_file.close();
+        
+        double best_time_ms = *std::min_element(times_ms.begin(), times_ms.end());
+        double best_time_s  = best_time_ms / 1000.0;
+        
+        long long flops_per_spmv   = 2LL * nz;                                     // 1 mul + 1 add per nonzero
+        double    bytes_per_spmv   = 12.0 * nz + 16.0 * M;                         // 8B val + 4B col_idx + ~16B for y (zero+write)
+        
+        double gflops = flops_per_spmv / best_time_s / 1e9;
+        double gbs    = bytes_per_spmv / best_time_s / 1e9;
+        double arith_intensity = static_cast<double>(flops_per_spmv) / bytes_per_spmv;
+        
+        std::cout << "\n=== Parallel CSR SpMV Benchmark Results ===\n";
+        std::cout << "Matrix             : " << matrix_filename << "\n";
+        std::cout << "Dimensions         : " << M << " x " << N << "   (nnz = " << nz << ")\n";
+        std::cout << "Threads            : " << num_threads << "\n";
+        std::cout << "Best time          : " << std::fixed << std::setprecision(3) 
+                  << best_time_ms << " ms\n";
+        std::cout << "Performance        : " << std::setprecision(2) 
+                  << gflops << " GFLOPS\n";
+        std::cout << "Effective Bandwidth: " << std::setprecision(2) 
+                  << gbs << " GB/s\n";
+        std::cout << "Arithmetic Intensity: " << std::setprecision(3) 
+                  << arith_intensity << " FLOP/byte\n";
+        std::cout << "==========================================\n";
+    }
 
     return 0;
 }
