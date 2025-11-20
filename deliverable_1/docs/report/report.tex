@@ -448,44 +448,54 @@ We successfully implemented and benchmarked sequential and parallel SpMV kernels
 
 Overall, while OpenMP enables effective parallelization of CSR-based SpMV on shared-memory systems, \textbf{achieving consistent high performance requires careful consideration of matrix properties, thread scheduling, and underlying hardware characteristics}.
 
-\bibliographystyle{IEEEtran}
-\begin{thebibliography}{00}
+\balance
+
+% =============== REFERENCES (manual, no BibTeX needed) ===============
+\begin{thebibliography}{10}
 
 \bibitem{b1}
-\href{https://math.nist.gov/MatrixMarket/mmio-c.html}{ANSI C library for Matrix Market I/O}
+Matrix Market I/O routines in ANSI C.
+\url{https://math.nist.gov/MatrixMarket/mmio-c.html}.
 
 \bibitem{b2}
-\href{https://sparse.tamu.edu/}{The SuiteSparse Matrix Collection}
+T.~A. Davis,
+The SuiteSparse Matrix Collection (formerly the University of Florida Sparse Matrix Collection).
+\url{https://sparse.tamu.edu/}.
 
 \bibitem{b3}
-\href{https://sparse.tamu.edu/HB/1138_bus}{1138\_bus matrix}
+1138\_bus matrix from HB collection.
+\url{https://sparse.tamu.edu/HB/1138_bus}.
 
 \bibitem{b4}
-\href{https://sparse.tamu.edu/HB/bcsstk18}{bcsstk18 matrix}
+bcsstk18 matrix from HB collection.
+\url{https://sparse.tamu.edu/HB/bcsstk18}.
 
 \bibitem{b5}
-\href{https://sparse.tamu.edu/vanHeukelum/cage14}{cage14 matrix}
+cage14 matrix from vanHeukelum collection.
+\url{https://sparse.tamu.edu/vanHeukelum/cage14}.
 
 \bibitem{b6}
-\href{https://sparse.tamu.edu/Schenk/nlpkkt160}{nlpkkt160 matrix}
+nlpkkt160 matrix from Schenk collection.
+\url{https://sparse.tamu.edu/Schenk/nlpkkt160}.
 
 \bibitem{b7}
-\href{https://sparse.tamu.edu/Janna/Queen_4147}{Queen\_4147 matrix}
+Queen\_4147 matrix from Janna collection.
+\url{https://sparse.tamu.edu/Janna/Queen_4147}.
 
 \bibitem{b8}
- Intro to Parallel Computing – Report and project preparation
-(course guide, accessed Nov 10, 2025).
+Introduction to Parallel Computing — Report and project preparation guidelines,
+University of Trento, 2025--2026 (course material, accessed Nov 10, 2025).
 
 \bibitem{reordering_paper}
-O. Asudeh et al., "Is Sparse Matrix Reordering Effective for Sparse Matrix-Vector 
-Multiplication?" arXiv:2506.10356 [cs.DC], Jun. 2025.
+O.~Asudeh et al.,
+``Is Sparse Matrix Reordering Effective for Sparse Matrix-Vector Multiplication?,''
+arXiv:2506.10356 [cs.DC], Jun. 2025.
 
 \bibitem{bandwidth_paper}
-Z. Gu, J. Moreira, D. Edelsohn, and A. Azad, "Bandwidth-Optimized Parallel Algorithms 
-for Sparse Matrix-Matrix Multiplication using Propagation Blocking," 
+Z.~Gu, J.~Moreira, D.~Edelsohn, and A.~Azad,
+``Bandwidth-Optimized Parallel Algorithms for Sparse Matrix-Matrix Multiplication using Propagation Blocking,''
 arXiv:2002.11302 [cs.DC], Feb. 2020.
 
 \end{thebibliography}
 
-\balance
 \end{document}
