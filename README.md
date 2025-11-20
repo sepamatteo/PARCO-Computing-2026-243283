@@ -1,6 +1,6 @@
 # Sepa Matteo PARCO-Computing-2026-243283
 
-This repository contains code and materials related to parallel computing with a focus on sparse matrix-vector multiplication (SpMV) optimized for shared-memory parallelization. It is part of the coursework or research activities in the "Introduction to Parallel Computing" academic year 2025-2026.
+This repository contains code and materials related to parallel computing with a focus on sparse matrix-vector multiplication (SpMV) optimized for shared-memory parallelization. It is part of the coursework in the "Introduction to Parallel Computing" course administered in the academic year 2025-2026.
 
 **Written By: Sepa Matteo (243283)**
 
@@ -19,9 +19,9 @@ The project includes:
 
 ## Features
 
+- Support for reading matrix data from Matrix Market (.mtx) files.
 - Implementation of COO (Coordinate) and CSR (Compressed Sparse Row) sparse matrix storage formats.
 - Sequential and OpenMP-based parallel SpMV algorithms.
-- Support for reading matrix data from Matrix Market (.mtx) files.
 - Performance benchmarking over multiple matrices covering different sparsity degrees.
 - Tools for cache profiling and performance analysis.
 
