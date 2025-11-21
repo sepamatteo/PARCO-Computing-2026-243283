@@ -76,10 +76,7 @@ SpMV, sparse matrices, OpenMP, parallel computing, CSR, COO, SIMD, vectorization
 \section{Introduction}
 Sparse matrix-vector multiplication (SpMV), the operation $y = Ax$ where $A$ is a sparse matrix and $x$ a monodimensional vector, is a fundamental kernel in many scientific and engineering applications. Its performance is critical for a wide range of domains. The efficiency of SpMV is highly dependent on the data structure used to store the sparse matrix, as it affects memory access patterns and computational efficiency~\cite{bandwidth_paper}.
 
-This project focuses on the implementation and performance analysis of SpMV using the popular sparse matrix format:
-\begin{itemize}
-    \item \textbf{Compressed Sparse Row (CSR):} A more compact format that enables efficient row-wise access to the matrix elements.
-\end{itemize}
+This project focuses on the implementation and performance analysis of SpMV using the popular sparse matrix format \textbf{Compressed Sparse Row (CSR):} A more compact format that enables efficient row-wise access to the matrix elements.
 
 We develop sequential and parallel implementations of SpMV in C++ and use OpenMP for shared-memory parallelization. We conduct a comparative performance analysis of these implementations on a real-world large-scale sparse matrix and compare the result from a regular machine (i7-7700k, 16GB of RAM) and the HPC cluster. This report presents our methodology, experimental setup, performance results, and an in-depth discussion of the observed performance characteristics.
 
@@ -90,12 +87,10 @@ We also randomly generate the vector to multiply with the matrix using the \text
 
 \subsection{Sparse Storage Formats}
 \subsubsection{Coordinate (COO)}
-The COO format stores each non-zero element as a triplet \texttt{(r, c, v)}, where \texttt{r} is the row index, \texttt{c} is the column index, and \texttt{v} is the value. These triplets are stored in three separate arrays: \texttt{row\_idx}, \texttt{col\_idx}, and \texttt{values}. The SpMV operation in COO format is implemented by iterating over the non-zero elements and performing the update \texttt{y[row\_idx[k]]} += \texttt{values[k]} $\cdot$ \texttt{x[col\_idx[k]]}. To improve performance, we process the non-zero elements in blocks and use \texttt{\#pragma omp simd} to encourage \textbf{vectorization} of the inner loop.
+The COO format stores each non-zero element as a triplet \texttt{(r, c, v)}, where \texttt{r} is the row index, \texttt{c} is the column index, and \texttt{v} is the value. These triplets are stored in three separate arrays: \texttt{row\_idx}, \texttt{col\_idx}, and \texttt{values}. The SpMV operation in COO format is implemented by iterating over the non-zero elements and performing the update \texttt{y[row\_idx[k]]} += \texttt{values[k]} $\cdot$ \texttt{x[col\_idx[k]]}.
 
 \subsubsection{Compressed Sparse Row (CSR)}
 The CSR format uses three arrays: \texttt{values}, \texttt{col\_idx}, and \texttt{row\_ptr}. The \texttt{values} and \texttt{col\_idx} arrays store the non-zero values and their corresponding column indices, ordered by row. The \texttt{row\_ptr} array stores the starting index of each row in the \texttt{values} and \texttt{col\_idx} arrays. The SpMV operation in CSR format involves iterating through each row \texttt{i}, and for each row, iterating through its non-zero elements from \texttt{row\_ptr[i]} to \texttt{row\_ptr[i+1]-1}.
-
-Our implementation includes a COO-to-CSR conversion step. This involves counting the number of non-zero elements in each row, computing the prefix sum to determine the row pointers, and then populating the \texttt{values} and \texttt{col\_idx} arrays.
 
 \subsection{Sequential CSR SpMV}
 Firstly we implement a standard conversion from COO format to CSR format for a sparse matrix with \texttt{M} \textbf{rows} and \texttt{nz} \textbf{non-zero elements}. COO stores non-zero entries as separate lists of row indices, column indices, and values, while CSR compresses the data using a row pointer array, column indices array, and values array for efficient row-wise access.\\
@@ -296,7 +291,6 @@ The two largest problems show continued improvement to \texttt{64} threads, but 
 
 This plateau is consistent with \textbf{memory-bound behavior}~\cite{bandwidth_paper}:   SpMV performs one FLOP per two irregular memory references.  
 Once available memory bandwidth is saturated, additional threads increase contention without improving throughput.  
-The dynamic scheduling policy (\texttt{dynamic,64}) incurs growing overhead at high thread counts due to frequent chunk allocation.
 
 \subsection{Scheduling}
 \label{subsec:scheduling}
