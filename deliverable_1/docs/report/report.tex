@@ -419,7 +419,7 @@ LL write miss rate               & 15.3\%  & 15.0\%  & $\approx$ \\
 \textbf{Interpretation:}
 
 \begin{itemize}
-    \item The kernel executes approximately \textbf{95 M instructions} and approximately \textbf{44 M data references} per SpMV — consistent with approximately \texttt{1.6-{}-2} memory operations per non-zero.
+    \item The kernel executes approximately \textbf{95 M instructions} and approximately \textbf{44 M data references} — consistent with approximately \texttt{1.6-{}-2} memory operations per non-zero.
     \item The \textbf{last-level cache miss rate of 6.3\%} (approximately 2.8 M compulsory/capacity misses) is the dominant performance limiter.  
       Each LL miss costs approximately \texttt{200-{}-250 cycles} $\rightarrow$ approximately \texttt{560-{}-700 million} cycles spent waiting for memory.
     \item Arithmetic intensity is extremely low (approximately \texttt{0.05-{}-0.06 FLOP/byte}), making SpMV \textbf{strongly memory-bound}~\cite{bandwidth_paper} — performance scales with memory bandwidth, not core count, beyond approximately \texttt{16-{}-32 threads}.
