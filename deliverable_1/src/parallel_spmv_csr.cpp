@@ -121,7 +121,6 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < N; ++i) {
         x[i] = dis(gen);
     }
-    //
     
     // ================= Warm-up (3 iterations, not timed) =================
     if (verbose) {
@@ -168,8 +167,6 @@ int main(int argc, char* argv[]) {
     
     // toggles callgrind (set to false) collection here
     CALLGRIND_TOGGLE_COLLECT;
-    
-    //for (int j = 0; j < M; ++j) y[j] = 0.0;
     
     for (int i = 0; i < BENCHMARK_ITERS; ++i) {
         // ================= Parallel SpMV =================
