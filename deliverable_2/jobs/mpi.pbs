@@ -7,9 +7,9 @@
 # Queue name
 #PBS -q short_cpuQ
 # Set the maximum wall time
-#PBS -l walltime=04:30:00
+#PBS -l walltime=00:30:00
 # Number of nodes, cpus, mpi processors and amount of memory
-#PBS -l select=1:ncpus=8:mpiprocs=8:mem=16gb
+#PBS -l select=2:ncpus=8:mpiprocs=8:mem=16gb
 
 # Modules for python and MPI
 module load gcc91
@@ -42,10 +42,10 @@ for NODE in $NODES; do
 done
 
 # the code should be previously compiled
-make -C ../ clean
-make -C ../
+#make -C ../ clean
+#make -C ../
 
 # Run the code
 #mpirun -np 8 ./spmv_mpi ../data/cage14/cage14.mtx
 cd ../outputs
-mpirun ./spmv_mpi ../data/cage14/cage14.mtx
+mpirun ./spmv_mpi ../data/1138_bus/1138_bus.mtx
