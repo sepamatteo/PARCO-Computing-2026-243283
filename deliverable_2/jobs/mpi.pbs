@@ -2,12 +2,12 @@
 # Job name
 #PBS -N deliverable2_mpi
 # Output files
-#PBS -o ./deliverable2.o
-#PBS -e ./deliverable2.e
+#PBS -o logs/deliverable2.o
+#PBS -e logs/deliverable2.e
 # Queue name
 #PBS -q short_cpuQ
 # Set the maximum wall time
-#PBS -l walltime=1:00:00
+#PBS -l walltime=04:30:00
 # Number of nodes, cpus, mpi processors and amount of memory
 #PBS -l select=8:ncpus=8:mpiprocs=8:mem=16gb
 
@@ -20,6 +20,12 @@ g++() {
 }
 
 g++ --version
+
+cd "$PBS_O_WORKDIR"
+
+echo "Running in: $(pwd)"
+
+mkdir -p logs
 
 # Print the name of the file that contains the list of the nodes assigned to the job and list all the nodes
 NODES=$(cat $PBS_NODEFILE)
