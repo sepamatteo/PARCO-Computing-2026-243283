@@ -45,11 +45,11 @@ done
 #cd /home/username/dir
 
 # the code should be previously compiled
-cd ..
-make clean
-make
+make -C ../ clean
+make -C ../
 
 # Run the code
 #mpirun -np 8 ./spmv_mpi ../data/cage14/cage14.mtx
 # If you set the number of mpi processors, here it is enough to type
+cd ../outputs
 mpirun ./spmv_mpi ../data/cage14/cage14.mtx
