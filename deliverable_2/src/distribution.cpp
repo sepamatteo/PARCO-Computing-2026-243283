@@ -8,58 +8,119 @@ void distribute_matrix(int rank, int size, int M, int nz_global,
                        std::vector<int>& local_col_idx,
                        std::vector<double>& local_values,
                        int& local_M, int& local_nnz) {
+    
+    // Step 1: Calculate distribution metadata on rank 0
+    std::vector<int> row_counts(size);
+    std::vector<int> nnz_counts(size);
+    std::vector<int> row_displs(size + 1, 0);
+    std::vector<int> nnz_displs(size + 1, 0);
+    
     if (rank == 0) {
+        // Calculate how many rows and nnz each rank gets
         for (int r = 0; r < size; ++r) {
-            // Count local rows and nnz
-            local_M = 0;
-            local_nnz = 0;
+            row_counts[r] = 0;
+            nnz_counts[r] = 0;
             for (int i = r; i < M; i += size) {
-                local_M++;
-                local_nnz += global_row_ptr[i + 1] - global_row_ptr[i];
+                row_counts[r]++;
+                nnz_counts[r] += global_row_ptr[i + 1] - global_row_ptr[i];
             }
-            local_row_ptr.assign(local_M + 1, 0);
-            local_col_idx.resize(local_nnz);
-            local_values.resize(local_nnz);
+        }
+        
+        // Calculate displacements
+        for (int r = 0; r < size; ++r) {
+            row_displs[r + 1] = row_displs[r] + row_counts[r];
+            nnz_displs[r + 1] = nnz_displs[r] + nnz_counts[r];
+        }
+    }
+    
+    // Step 2: Broadcast counts to all ranks
+    MPI_Bcast(row_counts.data(), size, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(nnz_counts.data(), size, MPI_INT, 0, MPI_COMM_WORLD);
+    
+    // Each rank knows its local size
+    local_M = row_counts[rank];
+    local_nnz = nnz_counts[rank];
+    
+    // Step 3: Prepare send buffers on rank 0
+    std::vector<int> send_row_ptr;
+    std::vector<int> send_col_idx;
+    std::vector<double> send_values;
+    
+    if (rank == 0) {
+        // Total elements to send
+        int total_rows = row_displs[size];
+        int total_nnz = nnz_displs[size];
+        
+        send_row_ptr.resize(total_rows + size); // +size for the extra element per rank
+        send_col_idx.resize(total_nnz);
+        send_values.resize(total_nnz);
+        
+        // Pack data for each rank
+        for (int r = 0; r < size; ++r) {
+            int row_offset = row_displs[r];
+            int nnz_offset = nnz_displs[r];
             int local_row_idx = 0;
-            int nnz_idx = 0;
+            int local_nnz_idx = 0;
+            
+            // For each row owned by rank r (cyclic distribution)
             for (int gi = r; gi < M; gi += size) {
                 int start = global_row_ptr[gi];
                 int end = global_row_ptr[gi + 1];
                 int cnt = end - start;
-                local_row_ptr[local_row_idx + 1] = local_row_ptr[local_row_idx] + cnt;
+                
+                // Store row_ptr entry (relative offsets)
+                send_row_ptr[row_offset + local_row_idx] = local_nnz_idx;
+                
+                // Copy column indices and values
                 for (int k = start; k < end; ++k) {
-                    if (nnz_idx >= local_nnz) {
-                        std::cerr << "Rank 0 → rank " << r << ": nnz overflow!\n";
-                        MPI_Abort(MPI_COMM_WORLD, 1);
-                    }
-                    local_col_idx[nnz_idx] = global_col_idx[k];
-                    local_values[nnz_idx] = global_values[k];
-                    nnz_idx++;
+                    send_col_idx[nnz_offset + local_nnz_idx] = global_col_idx[k];
+                    send_values[nnz_offset + local_nnz_idx] = global_values[k];
+                    local_nnz_idx++;
                 }
                 local_row_idx++;
             }
-            assert(nnz_idx == local_nnz && "nnz count mismatch!");
-            // Send to other ranks
-            int meta[2] = {local_M, local_nnz};
-            MPI_Send(meta, 2, MPI_INT, r, 0, MPI_COMM_WORLD);
-            if (r != 0) {
-                MPI_Send(local_row_ptr.data(), local_M + 1, MPI_INT, r, 1, MPI_COMM_WORLD);
-                MPI_Send(local_col_idx.data(), local_nnz, MPI_INT, r, 2, MPI_COMM_WORLD);
-                MPI_Send(local_values.data(), local_nnz, MPI_DOUBLE, r, 3, MPI_COMM_WORLD);
+            // Store final row_ptr entry
+            send_row_ptr[row_offset + local_row_idx] = local_nnz_idx;
+        }
+    }
+    
+    // Step 4: Allocate receive buffers
+    local_row_ptr.resize(local_M + 1);
+    local_col_idx.resize(local_nnz);
+    local_values.resize(local_nnz);
+    
+    // Step 5: Scatter data using MPI_Scatterv
+    // For row_ptr: each rank gets row_counts[rank] + 1 elements
+    std::vector<int> row_ptr_counts(size);
+    std::vector<int> row_ptr_displs(size + 1, 0);
+    
+    if (rank == 0) {
+        for (int r = 0; r < size; ++r) {
+            row_ptr_counts[r] = row_counts[r] + 1;
+            if (r > 0) {
+                row_ptr_displs[r] = row_ptr_displs[r - 1] + row_counts[r - 1] + 1;
             }
         }
-    } else {
-        int meta[2];
-        MPI_Recv(meta, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        local_M = meta[0];
-        local_nnz = meta[1];
-        local_row_ptr.resize(local_M + 1);
-        local_col_idx.resize(local_nnz);
-        local_values.resize(local_nnz);
-        MPI_Recv(local_row_ptr.data(), local_M + 1, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(local_col_idx.data(), local_nnz, MPI_INT, 0, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(local_values.data(), local_nnz, MPI_DOUBLE, 0, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
+    
+    MPI_Bcast(row_ptr_counts.data(), size, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(row_ptr_displs.data(), size, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(nnz_displs.data(), size, MPI_INT, 0, MPI_COMM_WORLD);
+    
+    // Scatter row_ptr
+    MPI_Scatterv(send_row_ptr.data(), row_ptr_counts.data(), row_ptr_displs.data(), MPI_INT,
+                 local_row_ptr.data(), local_M + 1, MPI_INT,
+                 0, MPI_COMM_WORLD);
+    
+    // Scatter col_idx
+    MPI_Scatterv(send_col_idx.data(), nnz_counts.data(), nnz_displs.data(), MPI_INT,
+                 local_col_idx.data(), local_nnz, MPI_INT,
+                 0, MPI_COMM_WORLD);
+    
+    // Scatter values
+    MPI_Scatterv(send_values.data(), nnz_counts.data(), nnz_displs.data(), MPI_DOUBLE,
+                 local_values.data(), local_nnz, MPI_DOUBLE,
+                 0, MPI_COMM_WORLD);
 }
 
 void init_local_vector(int rank, int size, int N,
