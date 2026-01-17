@@ -3,8 +3,9 @@ CXX = mpicxx
 CC  = mpicc
 
 # Compiler flags
-CXXFLAGS = -O3 -std=c++11 -Wall -Wextra -pedantic -Iinclude -MMD -MP
+CXXFLAGS = -O3 -std=c++11 -Wall -fopenmp -Wextra -pedantic -Iinclude -MMD -MP
 CFLAGS   = -O3 -Wall -Wextra -pedantic -Iinclude -MMD -MP
+LDFLAGS  = -fopenmp
 
 # Directories
 SRC_DIR    = src

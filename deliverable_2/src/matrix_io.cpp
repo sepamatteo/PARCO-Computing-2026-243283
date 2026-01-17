@@ -3,6 +3,12 @@
 void read_matrix_market(const std::string& filename, int& M, int& N, int& nz_global,
                         std::vector<int>& row_ptr, std::vector<int>& col_idx,
                         std::vector<double>& values) {
+
+    if (filename.empty()) {
+        std::cerr << "Rank 0: Invalid filename\n";
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+
     FILE* f = fopen(filename.c_str(), "r");
     if (!f) {
         std::cerr << "Rank 0: Cannot open " << filename << "\n";
@@ -36,6 +42,7 @@ void read_matrix_market(const std::string& filename, int& M, int& N, int& nz_glo
         val_coo[i] = v;
     }
     fclose(f);
+
     // COO -> CSR
     row_ptr.assign(M + 1, 0);
     for (int i = 0; i < nz_global; ++i) {

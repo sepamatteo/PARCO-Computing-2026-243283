@@ -6,6 +6,7 @@
 #include <cassert>
 #include <unordered_map>
 #include <iomanip>
+#include <omp.h>
 
 #include "../include/matrix_io.h"
 #include "../include/distribution.h"
@@ -22,18 +23,30 @@ int main(int argc, char** argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     if (argc < 2) {
-        if (rank == 0) std::cerr << "Usage: mpirun -np P ./spmv_mpi <matrix.mtx> [--verbose ; -v]\n";
+        if (rank == 0) std::cerr << "Usage: mpirun -np P ./spmv_mpi <matrix.mtx> [--threads T] [--verbose ; -v]\n";
         MPI_Finalize();
         return 1;
     }
 
     std::string matrix_filename = argv[1];
     bool verbose = false;
+    int num_threads = 1;
+
     for (int i = 2; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--verbose" || arg == "-v") {
             verbose = true;
+        } else if (arg  == "--threads" || arg == "-t") {
+            if (i + 1 < argc) {
+                num_threads = std::atoi(argv[++i]);
+            }
         }
+    }
+
+    omp_set_num_threads(num_threads);
+
+    if (rank == 0 && verbose) {
+        std::cout << "OMP threads per MPI rank: " << num_threads << std::endl;
     }
 
     // ===== GLOBAL MATRIX DATA =====
@@ -59,6 +72,16 @@ int main(int argc, char** argv) {
                       global_row_ptr, global_col_idx, global_values,
                       local_row_ptr, local_col_idx, local_values,
                       local_M, local_nnz);
+
+    // Free global matrix memory on rank 0 (no longer needed)
+    if (rank == 0) {
+        global_row_ptr.clear();
+        global_row_ptr.shrink_to_fit();
+        global_col_idx.clear();
+        global_col_idx.shrink_to_fit();
+        global_values.clear();
+        global_values.shrink_to_fit();
+        }
 
     // ===== Local vector x (cyclic distribution) =====
     std::vector<double> local_x;
