@@ -38,7 +38,7 @@ all: $(TARGET)
 
 # Link the executable
 $(TARGET): $(OBJS) | $(OUTPUT_DIR)
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) -o $@
 
 # Compile C++ sources
 $(OUTPUT_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OUTPUT_DIR)

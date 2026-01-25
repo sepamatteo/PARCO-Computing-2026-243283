@@ -4,7 +4,6 @@
 #include <string>
 #include <chrono>
 #include <cassert>
-#include <unordered_map>
 #include <iomanip>
 #include <omp.h>
 
@@ -88,6 +87,13 @@ int main(int argc, char** argv) {
     int local_col_count = 0;
     init_local_vector(rank, size, N, local_x, local_col_count);
 
+    GhostExchange ghost;
+    build_ghost_structure(
+        rank, size, N,
+        local_col_idx,
+        ghost
+    );
+
     double best_time_s     = 1e9;
     double total_time_all  = 0.0;
     double total_comm_time = 0.0;
@@ -97,11 +103,13 @@ int main(int argc, char** argv) {
         std::cout << "Running " << WARMUP_ITERS << " warm-up iterations...\n";
     }
     for (int iter = 0; iter < WARMUP_ITERS; ++iter) {
-        std::unordered_map<int, double> ghost_x;
-        exchange_ghosts(rank, size, N, local_nnz, local_col_idx, local_x, ghost_x);
+        std::vector<double> ghost_values;
+        exchange_ghost_values(rank, size, ghost, local_x, ghost_values);
+
         std::vector<double> y_local;
-        compute_local_spmv(rank, size, local_M, local_row_ptr, local_col_idx, local_values,
-                           local_x, ghost_x, y_local);
+        compute_local_spmv(rank, size, local_M, local_row_ptr,
+                           local_col_idx, local_values,
+                           local_x, ghost_values, ghost, y_local);
     }
 
     // ===== Benchmark (timed) =====
@@ -114,14 +122,14 @@ int main(int argc, char** argv) {
 
         // ===== Communication phase =====
         auto start_comm = std::chrono::steady_clock::now();
-        std::unordered_map<int, double> ghost_x;
-        exchange_ghosts(rank, size, N, local_nnz, local_col_idx, local_x, ghost_x);
+        std::vector<double> ghost_values;
+        exchange_ghost_values(rank, size, ghost, local_x, ghost_values);
         auto end_comm = std::chrono::steady_clock::now();
 
         // ===== Computation phase ======
         std::vector<double> y_local;
         compute_local_spmv(rank, size, local_M, local_row_ptr, local_col_idx, local_values,
-                           local_x, ghost_x, y_local);
+                           local_x, ghost_values, ghost, y_local);
 
         auto end_total = std::chrono::steady_clock::now();
 
