@@ -18,12 +18,6 @@ void compute_local_spmv(int rank, int size, int local_M,
 {
     y_local.assign(local_M, 0.0);
 
-    // Build ghost column-to-index map (O(num_ghosts), done once per call)
-    /*std::unordered_map<int, int> ghost_map;
-    for (size_t t = 0; t < ghost.ghost_cols.size(); ++t) {
-        ghost_map[ghost.ghost_cols[t]] = static_cast<int>(t);
-        }*/
-
     // MPI+X: OpenMP parallel over local rows
     #pragma omp parallel for schedule(guided, 64)
     for (int i = 0; i < local_M; ++i) {
@@ -43,7 +37,6 @@ void compute_local_spmv(int rank, int size, int local_M,
                 xval = local_x[lidx];
             } else {
                 // Ghost x entry: O(1) hash lookup
-                //auto it = ghost_map.find(j);
                 auto it = ghost.ghost_map.find(j);
                 if (it == ghost.ghost_map.end()) {
                     std::cerr << "Rank " << rank
