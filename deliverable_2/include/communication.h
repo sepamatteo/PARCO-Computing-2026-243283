@@ -33,6 +33,8 @@ struct GhostExchange {
 
     // Flat list of ghost columns (same order as recv buffer)
     std::vector<int> ghost_cols;
+    
+    std::unordered_map<int, int> ghost_map;
 };
 
 /**

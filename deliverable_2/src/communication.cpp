@@ -1,5 +1,6 @@
 #include "../include/communication.h"
 
+#include <cstddef>
 #include <mpi.h>
 #include <vector>
 #include <set>
@@ -72,6 +73,11 @@ void build_ghost_structure(
     }
 
     assert(offset == total_ghosts);
+    
+    ghost.ghost_map.reserve(ghost.ghost_cols.size());
+    for (size_t i = 0; i < ghost.ghost_cols.size(); ++i) {
+        ghost.ghost_map[ghost.ghost_cols[i]] = static_cast<int>(i);
+    }
 }
 
 /*
