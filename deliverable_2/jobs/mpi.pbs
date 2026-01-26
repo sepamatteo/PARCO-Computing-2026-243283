@@ -5,7 +5,7 @@
 #PBS -o logs/deliverable2.o
 #PBS -e logs/deliverable2.e
 # Queue name
-#PBS -q short_cpuQ
+#PBS -q shortcpuQ
 # Set the maximum wall time
 #PBS -l walltime=00:30:00
 # Number of nodes, cpus, mpi processors and amount of memory
