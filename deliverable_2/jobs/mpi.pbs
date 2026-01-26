@@ -11,14 +11,6 @@
 # Number of nodes, cpus, mpi processors and amount of memory
 #PBS -l select=2:ncpus=8:mpiprocs=8:mem=16gb
 
-# Modules for python and MPI
-module load gcc91
-module load mpich-3.2.1--gcc-9.1.0
-
-g++() {
-    g++-9.1.0 "$@"
-}
-
 g++ --version
 
 cd "$PBS_O_WORKDIR"
@@ -48,4 +40,4 @@ done
 # Run the code
 #mpirun -np 8 ./spmv_mpi ../data/cage14/cage14.mtx
 cd ../outputs
-mpirun ./spmv_mpi ../data/1138_bus/1138_bus.mtx
+mpirun ./spmv_mpi ../data/cage14/cage14.mtx --threads 16 --verbose
