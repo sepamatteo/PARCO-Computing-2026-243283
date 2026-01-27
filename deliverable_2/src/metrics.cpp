@@ -1,7 +1,5 @@
 #include "../include/metrics.h"
 #include <iostream>
-#include <iomanip>
-#include <cmath>
 
 void collect_and_print_metrics(
     MPI_Comm comm,

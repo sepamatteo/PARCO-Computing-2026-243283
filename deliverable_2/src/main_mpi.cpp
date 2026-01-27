@@ -4,7 +4,6 @@
 #include <string>
 #include <chrono>
 #include <cassert>
-#include <iomanip>
 #include <omp.h>
 
 #include "../include/matrix_io.h"
