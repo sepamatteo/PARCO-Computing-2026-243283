@@ -9,7 +9,7 @@
 # Set the maximum wall time
 #PBS -l walltime=00:30:00
 # Number of nodes, cpus, mpi processors and amount of memory
-#PBS -l select=2:ncpus=8:mpiprocs=8:mem=16gb
+#PBS -l select=2:ncpus=8:mpiprocs=8:mem=32gb
 
 g++ --version
 
@@ -40,4 +40,4 @@ done
 # Run the code
 #mpirun -np 8 ./spmv_mpi ../data/cage14/cage14.mtx
 cd ../outputs
-mpirun ./spmv_mpi ../data/cage14/cage14.mtx --threads 16 --verbose
+mpirun ./spmv_mpi ../data/cage14/cage14.mtx --threads 2 --verbose
