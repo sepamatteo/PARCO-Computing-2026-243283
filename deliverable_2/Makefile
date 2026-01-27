@@ -21,7 +21,8 @@ CXX_SRCS = \
     $(SRC_DIR)/matrix_io.cpp \
     $(SRC_DIR)/distribution.cpp \
     $(SRC_DIR)/communication.cpp \
-    $(SRC_DIR)/spmv_local.cpp
+    $(SRC_DIR)/spmv_local.cpp \
+    $(SRC_DIR)/metrics.cpp
 
 C_SRCS = $(SRC_DIR)/mmio.c
 

@@ -11,6 +11,7 @@
 #include "../include/distribution.h"
 #include "../include/communication.h"
 #include "../include/spmv_local.h"
+#include "../include/metrics.h"
 
 #define WARMUP_ITERS 3
 #define BENCHMARK_ITERS 10
@@ -171,41 +172,28 @@ int main(int argc, char** argv) {
         }
     }
 
-    // ===== Final statistics (rank 0 only) =====
-    if (rank == 0) {
-        double avg_time_s = total_time_all / BENCHMARK_ITERS;
-        double avg_comm_s = total_comm_time / BENCHMARK_ITERS;
-
-        // ===== FLOPs: standard 2 per nonzero =====
-        long long flops_per_spmv = 2LL * nz_global;
-
-        double gflops_best = (flops_per_spmv / best_time_s) / 1e9;
-        double gflops_avg  = (flops_per_spmv / avg_time_s) / 1e9;
-
-        // ===== Rough bandwidth estimate =====
-        double bytes_per_spmv_approx = 12.0 * nz_global + 16.0 * M;  // 8B val + 4B col + ~16B y access
-        double gbs_avg = (bytes_per_spmv_approx / avg_time_s) / 1e9;
-
-        double arith_intensity = static_cast<double>(flops_per_spmv) / bytes_per_spmv_approx;
-
-        double comm_fraction = (avg_comm_s / avg_time_s) * 100.0;
-
-        std::cout << "\n=== Distributed MPI CSR SpMV Benchmark Results ===\n";
-        std::cout << "Matrix              : " << matrix_filename << "\n";
-        std::cout << "Dimensions          : " << M << " x " << N << "   (nnz = " << nz_global << ")\n";
-        std::cout << "Processes           : " << size << "\n";
-        std::cout << "Best max-time       : " << std::fixed << std::setprecision(3)
-                  << best_time_s * 1000 << " ms\n";
-        std::cout << "Avg max-time        : " << std::setprecision(3)
-                  << avg_time_s * 1000 << " ms\n";
-        std::cout << "Performance (best)  : " << std::setprecision(2) << gflops_best << " GFLOPS (system)\n";
-        std::cout << "Performance (avg)   : " << std::setprecision(2) << gflops_avg  << " GFLOPS (system)\n";
-        std::cout << "Effective Bandwidth : " << std::setprecision(2) << gbs_avg << " GB/s (approx)\n";
-        std::cout << "Arithmetic Intensity: " << std::setprecision(3) << arith_intensity << " FLOP/byte\n";
-        std::cout << "Communication frac. : " << std::setprecision(1) << comm_fraction << "%\n";
-        std::cout << "==============================================\n";
-    }
-
+    size_t mem_local =
+        local_row_ptr.size() * sizeof(int) +
+        local_col_idx.size() * sizeof(int) +
+        local_values.size()  * sizeof(double) +
+        local_x.size()       * sizeof(double) +
+        ghost.ghost_cols.size() * sizeof(int) +
+        ghost.ghost_map.size() * (sizeof(int) + sizeof(char));  // approx
+    
+    collect_and_print_metrics(
+        MPI_COMM_WORLD,
+        rank, size,
+        matrix_filename,
+        M, N, nz_global,
+        local_M, local_nnz,
+        static_cast<int>(ghost.ghost_cols.size()),
+        mem_local,
+        best_time_s,
+        total_time_all,
+        total_comm_time,
+        BENCHMARK_ITERS
+    );
+    
     MPI_Finalize();
     return 0;
 }

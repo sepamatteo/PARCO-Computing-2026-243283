@@ -80,6 +80,21 @@ void exchange_ghost_values(
     std::vector<double>& ghost_values
 );
 
+/**
+ * @brief One-time construction of ghost communication pattern
+ *
+ * Strategy:
+ *   1. Each rank scans its local matrix columns → finds remote columns it needs
+ *   2. Builds per-rank list of needed global columns (using set → unique & sorted)
+ *   3. Exchanges counts → prepares Alltoallv metadata
+ *   4. Builds flat list ghost_cols[] — the order in which ghosts will arrive in buffer
+ *   5. Builds ghost_map: global column index → position in ghost_values buffer
+ *
+ * Important properties:
+ *   - ghost_cols is sorted per source rank (because we used set)
+ *   - ghost_map allows O(1) lookup during SpMV
+ *
+ */
 void build_ghost_structure(
     int rank, int size, int N,
     const std::vector<int>& local_col_idx,
