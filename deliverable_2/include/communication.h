@@ -80,5 +80,10 @@ void exchange_ghost_values(
     std::vector<double>& ghost_values
 );
 
+void build_ghost_structure(
+    int rank, int size, int N,
+    const std::vector<int>& local_col_idx,
+    GhostExchange& ghost
+);
 
 #endif

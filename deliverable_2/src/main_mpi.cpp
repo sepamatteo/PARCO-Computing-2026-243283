@@ -93,6 +93,21 @@ int main(int argc, char** argv) {
         local_col_idx,
         ghost
     );
+    
+    // ===== Precompute column access metadata (OPTIMIZATION #3) =====
+    std::vector<char> col_is_local(local_col_idx.size());
+    std::vector<int>  col_access_idx(local_col_idx.size());
+    
+    for (size_t k = 0; k < local_col_idx.size(); ++k) {
+        int j = local_col_idx[k];
+        if (j % size == rank) {
+            col_is_local[k] = 1;
+            col_access_idx[k] = (j - rank) / size;
+        } else {
+            col_is_local[k] = 0;
+            col_access_idx[k] = ghost.ghost_map.at(j);  // SAFE: built once
+        }
+    }
 
     double best_time_s     = 1e9;
     double total_time_all  = 0.0;
@@ -109,7 +124,9 @@ int main(int argc, char** argv) {
         std::vector<double> y_local;
         compute_local_spmv(rank, size, local_M, local_row_ptr,
                            local_col_idx, local_values,
-                           local_x, ghost_values, ghost, y_local);
+                           local_x, ghost_values,
+                           col_is_local, col_access_idx,
+                           y_local);
     }
 
     // ===== Benchmark (timed) =====
@@ -128,8 +145,12 @@ int main(int argc, char** argv) {
 
         // ===== Computation phase ======
         std::vector<double> y_local;
-        compute_local_spmv(rank, size, local_M, local_row_ptr, local_col_idx, local_values,
-                           local_x, ghost_values, ghost, y_local);
+        compute_local_spmv(rank, size, local_M, local_row_ptr,
+                           local_col_idx, local_values,
+                           local_x, ghost_values,
+                           col_is_local, col_access_idx,
+                           y_local);
+
 
         auto end_total = std::chrono::steady_clock::now();
 

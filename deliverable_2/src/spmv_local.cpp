@@ -1,52 +1,31 @@
 #include "../include/spmv_local.h"
-#include "../include/communication.h"
 
 #include <mpi.h>
 #include <omp.h>
-#include <iostream>
 #include <vector>
-#include <unordered_map>
 
-void compute_local_spmv(int rank, int size, int local_M,
+void compute_local_spmv(int /*rank*/, int /*size*/, int local_M,
                         const std::vector<int>& local_row_ptr,
                         const std::vector<int>& local_col_idx,
                         const std::vector<double>& local_values,
                         const std::vector<double>& local_x,
                         const std::vector<double>& ghost_values,
-                        const GhostExchange& ghost,
+                        const std::vector<char>& col_is_local,
+                        const std::vector<int>& col_access_idx,
                         std::vector<double>& y_local)
 {
     y_local.assign(local_M, 0.0);
 
-    // MPI+X: OpenMP parallel over local rows
-    #pragma omp parallel for schedule(guided, 64)
+    #pragma omp parallel for schedule(static)
     for (int i = 0; i < local_M; ++i) {
         double sum = 0.0;
-        int start = local_row_ptr[i];
-        int end   = local_row_ptr[i + 1];
 
-        for (int k = start; k < end; ++k) {
-            int j = local_col_idx[k];
-            double v = local_values[k];
+        for (int k = local_row_ptr[i]; k < local_row_ptr[i + 1]; ++k) {
+            double xval = col_is_local[k]
+                ? local_x[col_access_idx[k]]
+                : ghost_values[col_access_idx[k]];
 
-            int owner = j % size;
-            double xval;
-            if (owner == rank) {
-                // Local cyclic x entry
-                int lidx = (j - rank) / size;
-                xval = local_x[lidx];
-            } else {
-                // Ghost x entry: O(1) hash lookup
-                auto it = ghost.ghost_map.find(j);
-                if (it == ghost.ghost_map.end()) {
-                    std::cerr << "Rank " << rank
-                              << ": missing ghost value for column " << j << std::endl;
-                    MPI_Abort(MPI_COMM_WORLD, 1);
-                }
-                int gidx = it->second;
-                xval = ghost_values[gidx];
-            }
-            sum += v * xval;
+            sum += local_values[k] * xval;
         }
 
         y_local[i] = sum;
