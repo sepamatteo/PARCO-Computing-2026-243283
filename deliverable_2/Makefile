@@ -3,7 +3,7 @@ CXX = mpicxx
 CC  = mpicc
 
 # Compiler flags
-CXXFLAGS = -O3 -std=c++11 -Wall -fopenmp -Wextra -pedantic -Iinclude -MMD -MP
+CXXFLAGS = -O3 -std=c++14 -Wall -fopenmp -Wextra -pedantic -Iinclude -MMD -MP
 CFLAGS   = -O3 -Wall -Wextra -pedantic -Iinclude -MMD -MP
 LDFLAGS  = -fopenmp
 
@@ -22,7 +22,8 @@ CXX_SRCS = \
     $(SRC_DIR)/distribution.cpp \
     $(SRC_DIR)/communication.cpp \
     $(SRC_DIR)/spmv_local.cpp \
-    $(SRC_DIR)/metrics.cpp
+    $(SRC_DIR)/metrics.cpp \
+    $(SRC_DIR)/matrix_gen.cpp
 
 C_SRCS = $(SRC_DIR)/mmio.c
 
