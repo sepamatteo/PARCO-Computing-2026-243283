@@ -56,7 +56,7 @@ This project implements a **distributed Sparse Matrix-Vector Multiplication (SpM
 |  ├─ matrix_gen.cpp
 │  ├─ matrix_io.cpp
 │  ├─ metrics.cpp
-│  ├─ mmio.cpp
+│  ├─ mmio.c
 |  └─spmv_local.cpp
 ├─ MAKEFILE
 └─ README.md
