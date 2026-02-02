@@ -63,7 +63,7 @@ This project implements a **distributed Sparse Matrix-Vector Multiplication (SpM
 
 ```
 ### Prerequisites
-- Tested on C++11 standard compiler 
+- Tested on C++14 standard compiler 
 - MPI implementation (OpenMPI or MPICH)
 - OpenMP support
 
