@@ -18,7 +18,7 @@ int generate_synthetic_matrix(int M, double density, int seed,
     std::vector<std::vector<std::pair<int, double>>> rows(M);  // Per-row list to handle duplicates
 
     // Expected nnz, but we generate exactly this many attempts (may have fewer after dedup)
-    int expected_nnz = static_cast<int>(density * static_cast<double>(M) * static_cast<double>(N));
+    long long int expected_nnz = static_cast<int>(density * static_cast<double>(M) * static_cast<double>(N));
     for (int i = 0; i < expected_nnz; ++i) {
         int r = gen() % M;  // Uniform row selection
         int c = dist_col(gen);
