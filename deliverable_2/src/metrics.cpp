@@ -1,4 +1,4 @@
-#include "../include/metrics.h"
+#include "../include/metrics.hpp"
 #include <iostream>
 
 void collect_and_print_metrics(

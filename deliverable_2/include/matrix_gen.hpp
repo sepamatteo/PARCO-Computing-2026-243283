@@ -1,5 +1,5 @@
-#ifndef MATRIX_GEN_H
-#define MATRIX_GEN_H
+#ifndef MATRIX_GEN_HPP
+#define MATRIX_GEN_HPP
 
 #include <vector>
 #include <string>

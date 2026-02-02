@@ -1,4 +1,4 @@
-#include "../include/matrix_io.h"
+#include "../include/matrix_io.hpp"
 
 void read_matrix_market(const std::string& filename, int& M, int& N, int& nz_global,
                         std::vector<int>& row_ptr, std::vector<int>& col_idx,

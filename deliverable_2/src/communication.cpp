@@ -1,4 +1,4 @@
-#include "../include/communication.h"
+#include "../include/communication.hpp"
 
 #include <cstddef>
 #include <mpi.h>

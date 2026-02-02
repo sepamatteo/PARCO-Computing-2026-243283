@@ -1,5 +1,5 @@
-#ifndef DISTRIBUTION_H
-#define DISTRIBUTION_H
+#ifndef DISTRIBUTION_HPP
+#define DISTRIBUTION_HPP
 
 /* -----------------------------------------------------------------------------
  Interface for distributing a global CSR matrix across MPI processes

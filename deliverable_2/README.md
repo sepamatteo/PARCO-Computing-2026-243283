@@ -37,13 +37,14 @@ This project implements a **distributed Sparse Matrix-Vector Multiplication (SpM
 ├─ docs/
 |  └─ report/
 ├─ include/
-|  ├─ communication.cpp
-│  ├─ distribution.cpp
-│  ├─ main_mpi.cpp              
-│  ├─ matrix_io.cpp
-│  ├─ metrics.cpp
-│  ├─ mmio.cpp
-|  └─spmv_local.cpp
+|  ├─ communication.hpp
+│  ├─ distribution.hpp
+|  ├─ matrix_gen.hpp
+│  ├─ main_mpi.hpp              
+│  ├─ matrix_io.hpp
+│  ├─ metrics.hpp
+│  ├─ mmio.h
+|  └─spmv_local.hpp
 ├─ jobs/
 |  └─ mpi.pbs                   # PBS script
 ├─ outputs/
@@ -52,6 +53,7 @@ This project implements a **distributed Sparse Matrix-Vector Multiplication (SpM
 │  ├─ communication.cpp
 │  ├─ distribution.cpp
 │  ├─ main_mpi.cpp              # Main function
+|  ├─ matrix_gen.cpp
 │  ├─ matrix_io.cpp
 │  ├─ metrics.cpp
 │  ├─ mmio.cpp

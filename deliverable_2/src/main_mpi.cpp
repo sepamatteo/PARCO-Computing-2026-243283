@@ -6,12 +6,12 @@
 #include <cassert>
 #include <omp.h>
 
-#include "../include/matrix_io.h"
-#include "../include/matrix_gen.h"
-#include "../include/distribution.h"
-#include "../include/communication.h"
-#include "../include/spmv_local.h"
-#include "../include/metrics.h"
+#include "../include/matrix_io.hpp"
+#include "../include/matrix_gen.hpp"
+#include "../include/distribution.hpp"
+#include "../include/communication.hpp"
+#include "../include/spmv_local.hpp"
+#include "../include/metrics.hpp"
 
 #define WARMUP_ITERS 3
 #define BENCHMARK_ITERS 10

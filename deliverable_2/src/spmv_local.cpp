@@ -1,4 +1,4 @@
-#include "../include/spmv_local.h"
+#include "../include/spmv_local.hpp"
 
 #include <mpi.h>
 #include <omp.h>

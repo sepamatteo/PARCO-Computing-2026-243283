@@ -1,5 +1,5 @@
-#ifndef COMMUNICATION_H
-#define COMMUNICATION_H
+#ifndef COMMUNICATION_HPP
+#define COMMUNICATION_HPP
 
 /*
  * @file communication.h

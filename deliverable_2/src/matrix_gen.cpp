@@ -1,4 +1,4 @@
-#include "../include/matrix_gen.h"
+#include "../include/matrix_gen.hpp"
 
 #include <random>
 #include <algorithm>

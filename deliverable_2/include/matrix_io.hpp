@@ -1,5 +1,5 @@
-#ifndef MATRIX_IO_H
-#define MATRIX_IO_H
+#ifndef MATRIX_IO_HPP
+#define MATRIX_IO_HPP
 
 #include <vector>
 #include <string>

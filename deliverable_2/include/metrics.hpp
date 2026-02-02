@@ -1,5 +1,5 @@
-#ifndef METRICS_H
-#define METRICS_H
+#ifndef METRICS_HPP
+#define METRICS_HPP
 
 #include <vector>
 #include <string>

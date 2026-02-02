@@ -1,11 +1,11 @@
-#ifndef SPMV_LOCAL_H
-#define SPMV_LOCAL_H
+#ifndef SPMV_LOCAL_HPP
+#define SPMV_LOCAL_HPP
 
 #include <vector>
 #include <iostream>
 #include <mpi.h>
 
-#include "../include/communication.h"
+#include "../include/communication.hpp"
 
 /**
  * @brief Computes local portion of sparse matrix-vector product:  y_local = A_local * x

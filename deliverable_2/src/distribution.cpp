@@ -1,4 +1,4 @@
-#include "../include/distribution.h"
+#include "../include/distribution.hpp"
 
 void distribute_matrix(int rank, int size, int M, int nz_global,
                        const std::vector<int>& global_row_ptr,
