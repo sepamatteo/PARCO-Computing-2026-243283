@@ -91,8 +91,9 @@ The executable will be named spmv_mpi.
 mpirun ./spmv_mpi ../data/<matrix>/<matrix>.mtx -np <P> [options]
 
 Options:
-  --threads T / -t      Number of OpenMP threads per MPI rank (default: 1)
-  --verbose / -v          Print warm-up and benchmark progress
+  --threads <T> / -t        Number of OpenMP threads per MPI rank (default: 1)
+  --verbose / -v            Print warm-up and benchmark progress
+  --synthetic <M> <p>       M = number of rows; p = density
 ```
 
 # Report
