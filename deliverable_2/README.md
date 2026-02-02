@@ -96,8 +96,8 @@ Options:
 # Report
 The full report for Deliverable 2 is available at ```docs/report/report.pdf```
 
-The report is a LaTeX-based report in IEEEtran format
-Contains methodology, data distribution strategy, ghost exchange explanation, hybrid OpenMP scheduling analysis, strong scaling results, load balance discussion, and conclusions.
+The report is a LaTeX-based report in IEEEtran format \
+It contains methodology, data distribution strategy, ghost exchange explanation, hybrid OpenMP scheduling analysis, strong scaling results, load balance discussion, and conclusions.
 
 # References / Acknowledgments
 
