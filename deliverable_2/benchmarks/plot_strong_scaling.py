@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # ─── Data ────────────────────────────────────────────────
-# Updated with values from the attached table
 p = np.array([1, 2, 4, 8, 16, 32])
 
 # Data extracted from table rows
@@ -63,7 +62,7 @@ ax3.set_xticks(p)
 ax3.set_xticklabels([f"P={int(x)}" for x in p])
 ax3.grid(True, axis='y', alpha=0.35)
 
-# ── 4. Speedup & Efficiency (Replaces Problem Size) ─────
+# ── 4. Speedup & Efficiency ─────
 ax4 = fig.add_subplot(2, 2, 4)
 ax4.set_title("Speedup & Efficiency")
 

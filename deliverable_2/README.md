@@ -33,14 +33,18 @@ This project implements a **distributed Sparse Matrix-Vector Multiplication (SpM
 ```text
 .
 |
+├─ benchmarks/
+|  ├─ plot_strong_scaling.py
+|  └─ plot_weak_scaling.py
 ├─ data/                       # Contains matrix market formatted matrices
 ├─ docs/
 |  └─ report/
+|     └─ sepa-243283-D2.pdf    # Report in PDF format
 ├─ include/
 |  ├─ communication.hpp
 │  ├─ distribution.hpp
 |  ├─ matrix_gen.hpp
-│  ├─ main_mpi.hpp              
+│  ├─ main_mpi.hpp
 │  ├─ matrix_io.hpp
 │  ├─ metrics.hpp
 │  ├─ mmio.h

@@ -17,7 +17,7 @@
 \usepackage{adjustbox}
 \usepackage{float}
 \usepackage{multirow}
-\usepackage{pdflscape}   % for landscape pages (better PDF rotation than rotating)
+\usepackage{pdflscape}
 \usepackage{booktabs}
 \usepackage{placeins}
 
@@ -252,7 +252,6 @@ Metrics: speedup = $T_1 / T_P$ (ideal = $P$), parallel efficiency = speedup / $P
 \captionof{table}{Strong scaling results for cage14 matrix}
 \label{tab:strongscaling}
 \setlength{\tabcolsep}{4pt}
-% \resizebox takes the width argument (\columnwidth) and wraps the tabular
 \resizebox{\columnwidth}{!}{%
     \begin{tabular}{@{}l *{6}{c}@{}}
     \toprule
@@ -324,7 +323,6 @@ Experiments used fixed per-rank parameters:
 Global problem size scales linearly with $P$ (e.g., $M \approx 20{,}000 \times P$ rows at \texttt{base\_M}=20{,}000), while local workload remains constant.
 
 \subsubsection{Results}
-\FloatBarrier
 
 \begin{center}
 \captionof{table}{Weak scaling results (base\_M=10000, density=0.01)}
