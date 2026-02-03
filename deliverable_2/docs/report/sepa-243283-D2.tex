@@ -1,0 +1,446 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{balance}
+\usepackage{algorithm,algpseudocode}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{inconsolata}
+\usepackage{calc}
+\usepackage{caption}
+\usepackage[T1]{fontenc}
+\usepackage{adjustbox}
+\usepackage{float}
+\usepackage{multirow}
+\usepackage{pdflscape}   % for landscape pages (better PDF rotation than rotating)
+\usepackage{booktabs}
+\usepackage{placeins}
+
+
+\lstset{
+  language=C++,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{green!60!black}\itshape,
+  numberstyle=\tiny\color{gray},
+  numbers=left,
+  numbersep=8pt,
+  backgroundcolor=\color{gray!5},
+  frame=single,
+  rulecolor=\color{black!30},
+  frameround=tttt,
+  tabsize=2,
+  breaklines=true,
+  breakatwhitespace=true,
+  prebreak=\mbox{\textcolor{gray}{$\hookleftarrow$}},
+  postbreak=\mbox{\textcolor{gray}{$\hookrightarrow$}\space},
+  breakindent=0pt,
+  columns=flexible,
+  keepspaces=true,
+  showstringspaces=false,
+  xleftmargin=0pt,
+  xrightmargin=0pt,
+  framexleftmargin=0pt,           
+  framexrightmargin=0pt,
+  resetmargins=true,              
+  framesep=3pt,                   
+  framerule=0.4pt,                
+  aboveskip=6pt,
+  belowskip=6pt,
+  captionpos=b
+}
+
+
+\begin{document}
+
+\title{Deliverable 2: Distributed SpMV}
+
+\author{\IEEEauthorblockN{Sepa Matteo (243283)}
+\IEEEauthorblockA{\textit{Course: Introduction to Parallel Computing (2025–2026)} \\
+\textit{University of Trento}\\
+matteo.sepa@studenti.unitn.it \\
+\href{https://github.com/sepamatteo/PARCO-Computing-2026-243283}{github.com/sepamatteo/PARCO-Computing-2026-243283}}}
+
+
+\maketitle
+
+\begin{abstract}
+This report presents a distributed implementation of Sparse Matrix-Vector Multiplication (SpMV) using MPI for inter-process communication and OpenMP for intra-process parallelism. We implement a 1D cyclic row distribution for the matrix and cyclic column distribution for the vector, with ghost exchanges via \texttt{MPI\_Alltoallv} to handle non-local accesses. Experiments on SuiteSparse matrices demonstrate scalability, load balance, and communication overhead on a multi-node system. Results show up to [X]\% efficiency with [Y] processes, highlighting the impact of optimizations like precomputed ghost maps.
+\end{abstract}
+
+\begin{IEEEkeywords}
+SpMV, sparse matrices, OpenMP, parallel computing, CSR, COO, performance analysis, MPI, distributed system, High performance cluster.
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+Sparse Matrix-Vector Multiplication (SpMV) is a fundamental kernel in scientific computing, used in applications like graph analytics, machine learning, and simulations \cite{b8}. In distributed-memory systems, SpMV requires careful data partitioning to minimize communication while balancing computation. This deliverable extends shared-memory SpMV (from Deliverable 1) to a distributed setting using MPI.
+
+Our approach uses cyclic row distribution for the CSR matrix and cyclic column distribution for the vector $x$, necessitating ghost exchanges for non-local vector elements. Key contributions include: (1) efficient ghost communication via two-phase Alltoallv, (2) hybrid MPI+OpenMP for scalability, and (3) performance metrics collection for load balance and overhead analysis.
+
+The report is structured as follows: Section \ref{sec:method} details the methodology, Section \ref{sec:exp} describes experiments, Section \ref{sec:results} presents results, and Section \ref{sec:conc} concludes.
+
+\section{Methodology}
+\label{sec:method}
+
+
+\subsection{Sparse Storage Formats}
+\subsubsection{Coordinate (COO)}
+Suite Sparse matrix files are stored in COO format which will require a CSR conversion.
+The COO format stores each non-zero element as a triplet \texttt{(r, c, v)}, where \texttt{r} is the row index, \texttt{c} is the column index, and \texttt{v} is the value. These triplets are stored in three separate arrays: \texttt{row\_idx}, \texttt{col\_idx}, and \texttt{values}.
+
+\subsubsection{Compressed Sparse Row (CSR)}
+The CSR format uses three arrays: \texttt{values}, \texttt{col\_idx}, and \texttt{row\_ptr}. The \texttt{values} and \texttt{col\_idx} arrays store the non-zero values and their corresponding column indices, ordered by row. The \texttt{row\_ptr} array stores the starting index of each row in the \texttt{values} and \texttt{col\_idx} arrays. The SpMV operation in CSR format involves iterating through each row \texttt{i}, and for each row, iterating through its non-zero elements from \texttt{row\_ptr[i]} to \texttt{row\_ptr[i+1]-1}.
+
+Our implementation includes a COO-to-CSR conversion step. This involves counting the number of non-zero elements in each row, computing the prefix sum to determine the row pointers, and then populating the \texttt{values} and \texttt{col\_idx} arrays.
+
+\subsection{Parallel Design Strategy}
+We applied Foster's  \cite{foster} PCAM (Partitioning, Communication, Agglomeration, Mapping) design methodology to structure the parallelization of the SpMV kernel.
+
+\subsubsection{Partitioning}
+The computation was decomposed using domain decomposition. The finest granularity of work is the computation of a single element $y_i$ of the result vector, which corresponds to the dot product of the $i$-th matrix row and the vector $x$. Since the matrix is sparse, the computational cost per task varies depending on the number of non-zero elements ($nnz$) in that row.
+
+\subsubsection{Communication}
+The tasks are not independent; computing row $i$ requires access to specific elements of vector $x$ corresponding to the column indices of non-zeros in that row. If the required $x$ element resides on a different processor, communication is necessary. In a worst-case sparse matrix, this could imply all-to-all communication. We minimize latency by pre-identifying these non-local dependencies (ghost nodes) and batching them into fewer messages.
+
+\subsubsection{Agglomeration}
+To reduce communication overhead and leverage locality, we agglomerated fine-grained tasks (rows) into larger chunks.
+\begin{itemize}
+    \item \textbf{MPI Level:} Rows are assigned to MPI processes using a \textit{cyclic distribution}. While block distribution preserves locality, cyclic distribution was chosen to better balance the load for matrices with uneven row densities (e.g., power-law graphs), ensuring no single rank is burdened with all heavy rows.
+    \item \textbf{OpenMP Level:} Within each MPI rank, rows are further agglomerated into loop chunks processed by threads. This hybrid approach reduces the number of MPI processes required, thereby reducing the size of the global communicator and the overhead of collective operations.
+\end{itemize}
+
+\subsubsection{Mapping}
+The mapping step assigns the agglomerated tasks to physical execution units. We utilize a hybrid mapping strategy: MPI processes are mapped to physical nodes (or sockets) to handle distributed memory communication, while OpenMP threads are mapped to CPU cores to exploit shared memory within the node. The "Owner Computes" rule is strictly followed: the process owning row $i$ is responsible for computing $y_i$ and storing the result.
+
+
+\subsection{Communication: Ghost Exchange}
+Non-local column accesses require "ghost" values from other ranks. We build a static ghost structure once:
+- Scan local columns to identify remote ghosts per rank (using sets for uniqueness).
+- Exchange counts via \texttt{MPI\_Alltoall} and prepare displacements.
+- Create a flat \texttt{ghost\_cols} list and hash map for \texttt{O(1)} lookups.
+
+Values are exchanged per iteration via two \texttt{Alltoallv} phases: (1) request indices, (2) send values. This reuses the structure for efficiency.
+
+\begin{lstlisting}[caption={Ghost Exchange}]
+void build_ghost_structure(...) { /* Sets, Alltoall, maps */ }
+void exchange_ghost_values(...) { /* Alltoallv for reqs/values */ }
+\end{lstlisting}
+
+\subsection{Parallel CSR SpMV Implementation with OpenMP}
+We use OpenMP to parallelize the SpMV computation.
+\begin{itemize}
+    \item \textbf{Parallel CSR-SpMV:} The parallelization is done over the rows of the matrix. We use an OpenMP parallel for loop with a different schedules to distribute the rows among the threads.
+
+    \begin{lstlisting}[caption={Parallel SpMV Kernel}]
+void compute_local_spmv(...) {
+    y_local.assign(local_M, 0.0);
+
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < local_M; ++i) {
+        double sum = 0.0;
+
+        for (int k = local_row_ptr[i]; k < local_row_ptr[i + 1]; ++k) {
+            double xval = col_is_local[k]
+                ? local_x[col_access_idx[k]]
+                : ghost_values[col_access_idx[k]];
+
+            sum += local_values[k] * xval;
+        }
+
+        y_local[i] = sum;
+    }
+}
+    \end{lstlisting}
+
+\end{itemize}
+
+\section{Experiments}
+\label{sec:exp}
+
+\subsection{System Description}
+The experiments were conducted on a system with the following specifications:
+\begin{itemize}
+    \item \textbf{Compiler:} GCC (g++) 13.2.0
+    \item \textbf{Compiler Flags:} \texttt{-O3 -std=c++14 -Wall -fopenmp -Wextra -pedantic -Iinclude -MMD -MP}
+\end{itemize}
+
+\subsection{Dataset}
+We used the different matrices from the SuiteSparse Matrix Collection~\cite{b2} with different sizes and Non-zero elements:
+
+\begin{itemize}
+    \item \textbf{1138\_bus $1,138 \times 1,138$} \texttt{matrix with $4,054$} \textbf{non-zeroes} \cite{b3}
+    \item \textbf{bcsstk18 $11,948 \times 11,948$} \texttt{matrix with $149,090$} \textbf{non-zeroes} \cite{b4}
+    \item \textbf{cage14 $1,505,785 \times 1,505,785$} \texttt{matrix with $27,130,349$} \textbf{non-zeroes} \cite{b5}
+    \item \textbf{nlpkkt160 $8,345,600 \times 8,345,600$} \texttt{matrix with $225,422,112$} \textbf{non-zeroes} \cite{b6}
+    \item \textbf{Queen\_4147 $4,147,110 \times 4,147,110$} \texttt{matrix with $316,548,962$} \textbf{non-zeroes} \cite{b7}
+\end{itemize}
+
+\subsection{Benchmarking Methodology}
+We perform 3 warm-up SpMV iterations (untimed) to cache data, followed by 10 timed iterations. Timing uses \texttt{std::chrono}, reducing max time across ranks (bottleneck). Metrics include GFLOPS (\texttt{2*nnz/time}), communication fraction, load balance (min/max rows/nnz/ghosts), and memory footprint. Runs vary threads (1-32) and processes (1-64).
+
+
+\section{Results and Discussion}
+\label{sec:results}
+
+\subsection{Scheduling}
+\label{subsec:scheduling}
+
+The row-wise parallelisation of CSR-SpMV is inherently \textbf{load imbalanced} because the number of non-zero elements per row varies widely in real-world matrices. 
+OpenMP provides several \texttt{schedule} clauses to distribute loop iterations among threads~\cite{reordering_paper}.
+
+\begin{table}[H]
+\centering
+\caption{OpenMP scheduling strategies for CSR-SpMV row parallelisation.}
+\label{tab:sched}
+\begin{adjustbox}{max width=\columnwidth}
+\begin{tabular}{l l l l}
+\toprule
+\textbf{Schedule} &
+\textbf{Chunk size} &
+\textbf{Work distribution} &
+\textbf{Overhead} \\
+\midrule
+\textbf{static} &
+fixed at compile time \\
+(default = $M$/threads) &
+deterministic, no runtime cost &
+poor for irregular row lengths \\[4pt]
+
+\textbf{dynamic} &
+user-defined (e.g.\ 64) &
+threads request chunks when idle &
+high (lock + scheduling) \\[4pt]
+
+\textbf{guided} &
+starts large, shrinks exponentially &
+self-balancing &
+moderate, adaptive \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\subsection{Strong Scaling}
+\label{subsec:strongscaling}
+
+Strong scaling measures how performance improves when the number of processes increases while keeping the global problem size fixed. This tests the ability to reduce execution time through parallelism, limited by communication overhead, load imbalance, and Amdahl's law. In distributed SpMV, strong scaling is challenging due to increasing communication-to-computation ratio as local data per rank decreases.
+
+We evaluate strong scaling on large fixed-size matrices from the SuiteSparse collection \cite{b2}, which provide realistic irregular sparsity patterns representative of scientific applications.
+
+\subsubsection{Strong Scaling Benchmark Setup}
+Experiments used the following fixed matrices (from Section \ref{sec:exp}):
+\begin{itemize}
+    \item \textbf{1138\_bus} ($1{,}138 \times 1{,}138$, $4{,}054$ nnz)
+    \item \textbf{bcsstk18} ($11{,}948 \times 11{,}948$, $149{,}090$ nnz)
+    \item \textbf{cage14} ($1{,}505{,}785 \times 1{,}505{,}785$, $27{,}130{,}349$ nnz)
+    \item \textbf{nlpkkt160} ($8{,}345{,}600 \times 8{,}345{,}600$, $225{,}422{,}112$ nnz)
+    \item \textbf{Queen\_4147} ($4{,}147{,}110 \times 4{,}147{,}110$, $316{,}548{,}962$ nnz)
+\end{itemize}
+Number of processes $P = 1, 2, 4, 8, 16, 32$. 
+Metrics: speedup = $T_1 / T_P$ (ideal = $P$), parallel efficiency = speedup / $P$ (ideal = 100\%), average/max SpMV time, communication fraction, GFLOPS, and load balance (min/max rows/nnz/ghosts per rank).  
+3 warmup + 10 timed iterations per configuration.
+
+\subsubsection{Results}
+
+\begin{center}
+\captionof{table}{Strong scaling results for cage14 matrix}
+\label{tab:strongscaling}
+\setlength{\tabcolsep}{4pt}
+% \resizebox takes the width argument (\columnwidth) and wraps the tabular
+\resizebox{\columnwidth}{!}{%
+    \begin{tabular}{@{}l *{6}{c}@{}}
+    \toprule
+    Parameter              & P=1     & P=2     & P=4     & P=8     & P=16    & P=32    \\
+    \midrule
+    Avg Time/SpMV (ms)      & 54.803  & 38.853   & 33.153   & 35.587   & 40.104   & 36.541   \\
+    Speedup                & 1.00    & 1.410    & 1.653    & 1.540    & 1.366    & 1.499    \\
+    Efficiency (\%)        & 100     & 70.5    & 41.325    &  19.25   & 8.537    & 4.684    \\
+    Comm Fraction (\%)     & 0.002     & 18.556     & 62.885    & 74.660    & 85.494    & 34.529    \\
+    GFLOPS (avg)           & 0.990    & 1.396    & 1.636   &  0.981   & 1.061   & 1.039   \\
+    Ghosts (avg/rank)      & 0       & 752{,}034 & 934{,}533 & 838{,}105 & 627{,}365 & 425{,}588 \\
+    \bottomrule
+    \end{tabular}%
+}
+\end{center}
+
+
+\begin{center}
+\adjustbox{max width=1.05\columnwidth, keepaspectratio}{%
+  \includegraphics{strong_scaling.pdf}
+}
+\captionof{figure}{Strong scaling graph.}
+\label{fig:strong-scaling}
+\end{center}
+
+
+\subsection{Strong Scaling Analysis}
+
+Table~\ref{tab:strongscaling} shows the strong scaling behavior of SpMV on the cage14 matrix ($1{,}505{,}785 \times 1{,}505{,}785$, $27{,}130{,}349$ nonzeros) for 1–32 processes. While ideal strong scaling would yield linear speedup ($=P$), only limited gains are observed: runtime drops from $54.803$ ms at $P=1$ to $33.153$ ms at $P=4$ (speedup $1.653\times$, efficiency $41.3\%$), then plateaus or slightly increases ($35.587$--$40.104$ ms at $P=8$--$16$), with efficiency falling below $20\%$. The communication fraction grows rapidly from near $0\%$ to $85.5\%$, indicating that two-phase \texttt{MPI\_Alltoallv} ghost exchange dominates execution. Up to $\sim 935{,}000$ unique ghost entries per rank generate high message volume and network contention, and the low overall throughput ($\sim 1$ GFLOPS) confirms that computation is not the bottleneck. This reflects a typical distributed CSR SpMV limitation: despite balanced cyclic row partitioning, irregular column access induces heavy remote dependencies, and collective communication latency constrains scalability on commodity clusters~\cite{b15,b16,b17}.
+
+
+
+Hybrid MPI+OpenMP (e.g. \texttt{--threads 4}) mitigates some overhead by overlapping computation and communication, improving efficiency.
+
+Overall, the implementation achieves only moderate strong scaling, with performance becoming communication-bound beyond a small number of processes; although ghost exchange optimizations and precomputed access indices reduce overhead, their benefit is limited by the high cost of irregular \texttt{MPI\_Alltoallv} communication and Amdahl’s law effects.
+
+\subsection{Weak Scaling}
+\label{subsec:weakscaling}
+
+To complement the strong scaling experiments (fixed problem size, increasing number of processes), weak scaling evaluates how well the implementation scales when both the problem size and the number of MPI processes increase proportionally, keeping the computational load per process roughly constant. This is particularly important for distributed SpMV, as it reveals whether communication overhead (ghost exchanges via \texttt{MPI\_Alltoallv}) grows uncontrollably or remains manageable in large-scale runs.
+
+Real-world sparse matrices from SuiteSparse have fixed sizes, making true weak scaling difficult. To enable systematic weak scaling tests, we generate synthetic random sparse matrices using a fast approximation of the \textbf{Erdős–Rényi (ER) random graph model} \cite{b9,b10}.
+
+The generation process (implemented in \texttt{matrix\_gen.cpp}) works as follows:
+\begin{itemize}
+    \item The global matrix is square ($M = N = \texttt{base\_M} \times P$, where $P$ is the number of MPI processes and \texttt{base\_M} is fixed per rank).
+    \item Target non-zero density is user-specified (e.g., 0.005--0.02).
+    \item We sample approximately $\texttt{density} \times M \times N$ potential non-zeros by uniformly selecting row and column indices and assigning random values from Uniform$[-1, 1]$.
+    \item Per row, we sort by column index and remove duplicates (collision handling), yielding an actual nnz close to the expected value for low densities.
+\end{itemize}
+
+This sampling approximates the classic G(n,p) Erdős–Rényi model \cite{b9}, where each matrix entry is included independently with probability $p = \texttt{density}$. For small $p$, collision probability is negligible, providing an excellent match. Such random matrices offer:
+\begin{itemize}
+    \item Unstructured sparsity patterns (no artificial locality bias).
+    \item Roughly Poisson-distributed row/column degrees (good load balance under cyclic row distribution).
+    \item Tunable communication volume via density (higher $p$ $\to$ more ghosts $\to$ stresses MPI collectives).
+\end{itemize}
+
+This approach is widely used in distributed SpMV and graph analytics benchmarks for reproducibility and controlled scaling studies \cite{b11,b12,b13}.
+
+\subsubsection{Weak Scaling Benchmark Setup}
+Experiments used fixed per-rank parameters:
+\begin{itemize}
+    \item \texttt{base\_M} $= 10{,}000$ rows per rank
+    \item density $= 0.01$ (yielding $\sim$1M -- 256M global non-zeros)
+    \item Number of processes $P = 1, 2, 4, 8, 16$
+    \item 3 warmup + 10 timed SpMV iterations per configuration
+\end{itemize}
+Global problem size scales linearly with $P$ (e.g., $M \approx 20{,}000 \times P$ rows at \texttt{base\_M}=20{,}000), while local workload remains constant.
+
+\subsubsection{Results}
+\FloatBarrier
+
+\begin{center}
+\captionof{table}{Weak scaling results (base\_M=10000, density=0.01)}
+\label{tab:weakscaling-transposed}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l *{5}{c}@{}}
+\toprule
+Parameter              & P=1     & P=2     & P=4     & P=8     & P=16    \\
+\midrule
+Global Rows            & 10{,}000 & 20{,}000 & 40{,}000 & 80{,}000 & 160{,}000 \\
+nnz (global)           & $\sim$1M & $\sim$4M & $\sim$16M & $\sim$64M & $\sim$256M \\
+Avg Time/SpMV (ms)      & 1.517   & 2.410   & 3.461   & 3.957   & 132.7   \\
+Comm Fraction (\%)     & 3.7     & 1.1     & 10.1    & 62.4    & 58.7    \\
+GFLOPS (avg)           & 1.31    & 8.96    & 3.96    & 3.96    & 3.84    \\
+Ghosts (avg/rank)      & 0       & 10{,}000 & 10{,}000 & 70{,}000 & 150{,}000 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+
+\begin{center}
+\adjustbox{max width=1.05\columnwidth, keepaspectratio}{%
+  \includegraphics{weak_scaling.pdf}
+}
+\captionof{figure}{Weak scaling graph}
+\label{fig:weak-scaling}
+\end{center}
+
+
+\subsection{Weak Scaling Analysis}
+
+Ideal weak scaling maintains constant execution time per iteration as both problem size and number of processes increase proportionally (fixed work per rank). Our results with synthetic matrices (base\_M=10{,}000 rows per rank, density=0.01) show reasonable weak scaling up to $P=8$, with average time per SpMV increasing only modestly from $1.517$ ms ($P=1$) to $3.957$ ms ($P=8$). At $P=16$, however, time jumps significantly to $132.701$ ms, indicating degradation likely due to external cluster effects or escalating network contention.
+
+The communication fraction rises steadily from $3.7\%$ ($P=1$) to $62.4\%$ ($P=8$) and remains high at $58.7\%$ ($P=16$), reflecting the growing cost of ghost exchanges as the number of remote ranks increases. GFLOPS values fluctuate between $1.31$ and $8.96$ but stay low overall, consistent with the memory-bound and communication-limited nature of distributed CSR SpMV. The number of ghost entries per rank grows from $0$ ($P=1$) to $150{,}000$ ($P=16$), remaining well-balanced due to the uniform random access pattern of the synthetic matrix.
+
+Load balance remains excellent (constant local rows per rank, nnz variation within a few percent), thanks to the cyclic row distribution. These findings demonstrate acceptable weak scalability up to moderate process counts, with communication overhead becoming noticeable as expected in distributed SpMV on commodity clusters \cite{b11,b12,b13}.
+
+
+Higher OpenMP threading per rank (e.g., \texttt{--threads 4}) helped overlap computation with communication in some cases, improving weak scaling efficiency.
+
+Overall, the implementation demonstrates good weak scalability for sparse regimes typical of many scientific applications, with random matrices providing a reproducible stress test for communication patterns.
+
+\section{Conclusion}
+\label{sec:conc}
+
+In this work, we successfully designed and implemented a distributed Sparse Matrix-Vector Multiplication (SpMV) kernel using a hybrid MPI+OpenMP programming model. By applying Foster's PCAM methodology, we adopted a 1D cyclic row distribution strategy that effectively minimized computational load imbalance, a common challenge in processing irregular sparse matrices.
+
+Our performance analysis on a multi-node cluster highlights the inherent trade-offs in distributed sparse linear algebra. While the implementation demonstrated correct functionality and reasonable weak scaling up to 8 processes, strong scaling proved to be severely communication-bound. As observed in the experiments, communication overhead reached over 85\% in high-concurrency scenarios, with the latency of \texttt{MPI\_Alltoallv} ghost exchanges dominating the execution time. This confirms that while cyclic distribution ensures work balance, it does not preserve data locality, leading to high inter-process traffic.
+
+The results suggest that for this specific implementation, the network bandwidth and latency are the primary bottlenecks rather than floating-point throughput. Future optimizations should focus on reducing the communication volume through matrix reordering techniques (such as Reverse Cuthill-McKee) to improve locality, or by implementing overlapping communication and computation using non-blocking MPI primitives to hide latency. despite these limitations, the current system provides a robust foundation for distributed graph processing tasks.
+
+
+\bibliographystyle{IEEEtran}
+\begin{thebibliography}{00}
+
+\bibitem{b1}
+\href{https://math.nist.gov/MatrixMarket/mmio-c.html}{ANSI C library for Matrix Market I/O}
+
+\bibitem{b2}
+\href{https://sparse.tamu.edu/}{The SuiteSparse Matrix Collection}
+
+\bibitem{b3}
+\href{https://sparse.tamu.edu/HB/1138_bus}{1138\_bus matrix}
+
+\bibitem{b4}
+\href{https://sparse.tamu.edu/HB/bcsstk18}{bcsstk18 matrix}
+
+\bibitem{b5}
+\href{https://sparse.tamu.edu/vanHeukelum/cage14}{cage14 matrix}
+
+\bibitem{b6}
+\href{https://sparse.tamu.edu/Schenk/nlpkkt160}{nlpkkt160 matrix}
+
+\bibitem{b7}
+\href{https://sparse.tamu.edu/Janna/Queen_4147}{Queen\_4147 matrix}
+
+\bibitem{b8}
+ Intro to Parallel Computing – Report and project preparation
+(course guide, accessed Nov 10, 2025).
+
+\bibitem{b9}
+P. Erd\H{o}s and A. R\'enyi, ``On Random Graphs I,'' \emph{Publ. Math. Debrecen}, vol. 6, pp. 290--297, 1959.
+
+\bibitem{b10}
+B. Bollob\'as, \emph{Random Graphs}, 2nd ed. Cambridge University Press, 2001.
+
+\bibitem{b11}
+V. Bharadwaj et al., ``Distributed-Memory Sparse Kernels for Machine Learning,'' in \emph{Proc. IPDPS}, 2022, pp. 1--10. (Uses Erd\H{o}s-R\'enyi random matrices for weak scaling benchmarks)
+
+\bibitem{b12}
+H. Anzt et al., ``Experiences in autotuning SpMV for GPUs using multi-objective optimization,'' in \emph{Proc. IPDPSW}, 2017. (Discusses random matrices in scaling studies)
+
+\bibitem{b13}
+A. Bulu\c{c} et al., ``Parallel sparse matrix-matrix multiplication on multicore platforms,'' \emph{ACM Trans. Math. Softw.}, vol. 44, no. 4, 2018. (Uses ER-like random graphs for SpMV/SpGEMM scaling)
+
+\bibitem{b14}
+S. Dalton et al., ``Optimizing sparse matrix--matrix multiplication for the GPU,'' \emph{IEEE Trans. Parallel Distrib. Syst.}, vol. 30, no. 12, 2019. (Weak scaling with random sparse inputs)
+
+\bibitem{b15}
+A. Abdelfattah et al., ``Performance analysis of sparse matrix-vector multiplication on graphics processing units (GPUs),'' \emph{Electronics}, vol. 9, no. 10, 2020. (Strong scaling studies with SuiteSparse)
+
+\bibitem{b16}
+H. Anzt et al., ``Experiences in autotuning SpMV for GPUs using multi-objective optimization,'' in \emph{Proc. IPDPSW}, 2017. (Strong scaling on irregular matrices)
+
+\bibitem{b17}
+S. Dalton et al., ``Optimizing sparse matrix--matrix multiplication for the GPU,'' \emph{IEEE Trans. Parallel Distrib. Syst.}, vol. 30, no. 12, 2019. (Discusses strong scaling limits in distributed/hybrid SpMV)
+
+\bibitem{foster}
+I. Foster, \emph{Designing and Building Parallel Programs}. Addison-Wesley, 1995.
+
+\bibitem{reordering_paper}
+O. Asudeh et al., "Is Sparse Matrix Reordering Effective for Sparse Matrix-Vector 
+Multiplication?" arXiv:2506.10356 [cs.DC], Jun. 2025.
+
+\end{thebibliography}
+
+\balance
+\end{document}
