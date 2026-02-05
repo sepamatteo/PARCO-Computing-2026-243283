@@ -45,11 +45,11 @@
   showstringspaces=false,
   xleftmargin=0pt,
   xrightmargin=0pt,
-  framexleftmargin=0pt,           
+  framexleftmargin=0pt,
   framexrightmargin=0pt,
-  resetmargins=true,              
-  framesep=3pt,                   
-  framerule=0.4pt,                
+  resetmargins=true,
+  framesep=3pt,
+  framerule=0.4pt,
   aboveskip=6pt,
   belowskip=6pt,
   captionpos=b
@@ -191,7 +191,7 @@ We perform 3 warm-up SpMV iterations (untimed) to cache data, followed by 10 tim
 \subsection{Scheduling}
 \label{subsec:scheduling}
 
-The row-wise parallelisation of CSR-SpMV is inherently \textbf{load imbalanced} because the number of non-zero elements per row varies widely in real-world matrices. 
+The row-wise parallelisation of CSR-SpMV is inherently \textbf{load imbalanced} because the number of non-zero elements per row varies widely in real-world matrices.
 OpenMP provides several \texttt{schedule} clauses to distribute loop iterations among threads~\cite{reordering_paper}.
 
 \begin{table}[H]
@@ -242,8 +242,8 @@ Experiments used the following fixed matrices (from Section \ref{sec:exp}):
     \item \textbf{nlpkkt160} ($8{,}345{,}600 \times 8{,}345{,}600$, $225{,}422{,}112$ nnz)
     \item \textbf{Queen\_4147} ($4{,}147{,}110 \times 4{,}147{,}110$, $316{,}548{,}962$ nnz)
 \end{itemize}
-Number of processes $P = 1, 2, 4, 8, 16, 32$. 
-Metrics: speedup = $T_1 / T_P$ (ideal = $P$), parallel efficiency = speedup / $P$ (ideal = 100\%), average/max SpMV time, communication fraction, GFLOPS, and load balance (min/max rows/nnz/ghosts per rank).  
+Number of processes $P = 1, 2, 4, 8, 16, 32$.
+Metrics: speedup = $T_1 / T_P$ (ideal = $P$), parallel efficiency = speedup / $P$ (ideal = 100\%), average/max SpMV time, communication fraction, GFLOPS, and load balance (min/max rows/nnz/ghosts per rank).
 3 warmup + 10 timed iterations per configuration.
 
 \subsubsection{Results}
@@ -269,12 +269,21 @@ Metrics: speedup = $T_1 / T_P$ (ideal = $P$), parallel efficiency = speedup / $P
 \end{center}
 
 
+%\begin{center}
+%\adjustbox{max width=1.05\columnwidth, keepaspectratio}{%
+%  \includegraphics{strong_scaling.pdf}
+%}
+%\captionof{figure}{Strong scaling graph.}
+%\label{fig:strong-scaling}
+%\end{center}
+
+
 \begin{center}
 \adjustbox{max width=1.05\columnwidth, keepaspectratio}{%
-  \includegraphics{strong_scaling.pdf}
+  \includegraphics{all_matrices.pdf}
 }
-\captionof{figure}{Strong scaling graph.}
-\label{fig:strong-scaling}
+\captionof{figure}{Graph of all test matrices.}
+\label{fig:all_matrices}
 \end{center}
 
 
@@ -282,9 +291,11 @@ Metrics: speedup = $T_1 / T_P$ (ideal = $P$), parallel efficiency = speedup / $P
 
 Table~\ref{tab:strongscaling} shows the strong scaling behavior of SpMV on the cage14 matrix ($1{,}505{,}785 \times 1{,}505{,}785$, $27{,}130{,}349$ nonzeros) for 1–32 processes. While ideal strong scaling would yield linear speedup ($=P$), only limited gains are observed: runtime drops from $54.803$ ms at $P=1$ to $33.153$ ms at $P=4$ (speedup $1.653\times$, efficiency $41.3\%$), then plateaus or slightly increases ($35.587$--$40.104$ ms at $P=8$--$16$), with efficiency falling below $20\%$. The communication fraction grows rapidly from near $0\%$ to $85.5\%$, indicating that two-phase \texttt{MPI\_Alltoallv} ghost exchange dominates execution. Up to $\sim 935{,}000$ unique ghost entries per rank generate high message volume and network contention, and the low overall throughput ($\sim 1$ GFLOPS) confirms that computation is not the bottleneck. This reflects a typical distributed CSR SpMV limitation: despite balanced cyclic row partitioning, irregular column access induces heavy remote dependencies, and collective communication latency constrains scalability on commodity clusters~\cite{b15,b16,b17}.
 
+The strong scaling results, visualized in Figure~\ref{fig:all_matrices}, reveal distinct behaviors across matrix sizes. For smaller matrices such as \texttt{1138\_bus} and \texttt{bcsstk18}, speedup remains below 1.2 and efficiency drops rapidly beyond 4 processes, with communication overhead exceeding 70\% due to disproportionate ghost exchanges relative to computation. In contrast, larger matrices such as \texttt{cage14}, \texttt{nlpkkt160}, and \texttt{Queen\_4147} exhibit stronger initial scaling, achieving peak speedups of 1.6--5.1 and GFLOPs up to 5.3 at 8 processes, with efficiencies in the range of 19--63\%. However, beyond 8 processes, performance degrades as communication fractions rise to 70--90\%, while average ghost counts stabilize or decrease. These trends highlight the limitations of the cyclic distribution in high-process-count regimes for irregular sparse matrices.
 
 
-Hybrid MPI+OpenMP (e.g. \texttt{--threads 4}) mitigates some overhead by overlapping computation and communication, improving efficiency.
+
+Hybrid MPI+OpenMP (e.g. \texttt{{-}{-}threads 4}) mitigates some overhead by overlapping computation and communication, improving efficiency.
 
 Overall, the implementation achieves only moderate strong scaling, with performance becoming communication-bound beyond a small number of processes; although ghost exchange optimizations and precomputed access indices reduce overhead, their benefit is limited by the high cost of irregular \texttt{MPI\_Alltoallv} communication and Amdahl’s law effects.
 
@@ -435,7 +446,7 @@ S. Dalton et al., ``Optimizing sparse matrix--matrix multiplication for the GPU,
 I. Foster, \emph{Designing and Building Parallel Programs}. Addison-Wesley, 1995.
 
 \bibitem{reordering_paper}
-O. Asudeh et al., "Is Sparse Matrix Reordering Effective for Sparse Matrix-Vector 
+O. Asudeh et al., "Is Sparse Matrix Reordering Effective for Sparse Matrix-Vector
 Multiplication?" arXiv:2506.10356 [cs.DC], Jun. 2025.
 
 \end{thebibliography}
