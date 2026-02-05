@@ -34,6 +34,7 @@ This project implements a **distributed Sparse Matrix-Vector Multiplication (SpM
 .
 |
 ├─ benchmarks/
+|  ├─ plot_all_matrices.py
 |  ├─ plot_strong_scaling.py
 |  └─ plot_weak_scaling.py
 ├─ data/                       # Contains matrix market formatted matrices
@@ -101,7 +102,7 @@ Options:
 ```
 
 # Report
-The full report for Deliverable 2 is available at ```docs/report/report.pdf```
+The full report for Deliverable 2 is available at ```docs/report/sepa-243283-D2.pdf.pdf```
 
 The report is a LaTeX-based report in IEEEtran format \
 It contains methodology, data distribution strategy, ghost exchange explanation, hybrid OpenMP scheduling analysis, strong scaling results, load balance discussion, and conclusions.
