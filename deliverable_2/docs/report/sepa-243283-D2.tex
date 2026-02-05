@@ -70,7 +70,7 @@ matteo.sepa@studenti.unitn.it \\
 \maketitle
 
 \begin{abstract}
-This report presents a distributed implementation of Sparse Matrix-Vector Multiplication (SpMV) using MPI for inter-process communication and OpenMP for intra-process parallelism. We implement a 1D cyclic row distribution for the matrix and cyclic column distribution for the vector, with ghost exchanges via \texttt{MPI\_Alltoallv} to handle non-local accesses. Experiments on SuiteSparse matrices demonstrate scalability, load balance, and communication overhead on a multi-node system. Results show up to [X]\% efficiency with [Y] processes, highlighting the impact of optimizations like precomputed ghost maps.
+This report presents a distributed implementation of Sparse Matrix-Vector Multiplication (SpMV) using MPI for inter-process communication and OpenMP for intra-process parallelism. We implement a 1D cyclic row distribution for the matrix and cyclic column distribution for the vector, with ghost exchanges via \texttt{MPI\_Alltoallv} to handle non-local accesses. Experiments on SuiteSparse matrices demonstrate scalability, load balance, and communication overhead on a multi-node system. Results show up to 114\% efficiency with 8 processes, highlighting the impact of optimizations like precomputed ghost maps.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -135,13 +135,13 @@ void exchange_ghost_values(...) { /* Alltoallv for reqs/values */ }
 \subsection{Parallel CSR SpMV Implementation with OpenMP}
 We use OpenMP to parallelize the SpMV computation.
 \begin{itemize}
-    \item \textbf{Parallel CSR-SpMV:} The parallelization is done over the rows of the matrix. We use an OpenMP parallel for loop with a different schedules to distribute the rows among the threads.
+    \item \textbf{Parallel CSR-SpMV:} The parallelization is done over the rows of the matrix. We use an OpenMP parallel for loop with \textbf{guided} scheduling to distribute the rows among the threads.
 
     \begin{lstlisting}[caption={Parallel SpMV Kernel}]
 void compute_local_spmv(...) {
     y_local.assign(local_M, 0.0);
 
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(guided, 64)
     for (int i = 0; i < local_M; ++i) {
         double sum = 0.0;
 
@@ -182,7 +182,7 @@ We used the different matrices from the SuiteSparse Matrix Collection~\cite{b2} 
 \end{itemize}
 
 \subsection{Benchmarking Methodology}
-We perform 3 warm-up SpMV iterations (untimed) to cache data, followed by 10 timed iterations. Timing uses \texttt{std::chrono}, reducing max time across ranks (bottleneck). Metrics include GFLOPS (\texttt{2*nnz/time}), communication fraction, load balance (min/max rows/nnz/ghosts), and memory footprint. Runs vary threads (1-32) and processes (1-64).
+We perform 3 warm-up SpMV iterations (untimed) to cache data, followed by 10 timed iterations. Timing uses \texttt{std::chrono}, reducing max time across ranks (bottleneck). Metrics include GFLOPS (\texttt{2*nnz/time}), communication fraction, load balance (min/max rows/nnz/ghosts), and memory footprint. Runs vary processes (1-32) and uses \texttt{4 threads} per MPI rank.
 
 
 \section{Results and Discussion}
@@ -234,14 +234,9 @@ Strong scaling measures how performance improves when the number of processes in
 We evaluate strong scaling on large fixed-size matrices from the SuiteSparse collection \cite{b2}, which provide realistic irregular sparsity patterns representative of scientific applications.
 
 \subsubsection{Strong Scaling Benchmark Setup}
-Experiments used the following fixed matrices (from Section \ref{sec:exp}):
-\begin{itemize}
-    \item \textbf{1138\_bus} ($1{,}138 \times 1{,}138$, $4{,}054$ nnz)
-    \item \textbf{bcsstk18} ($11{,}948 \times 11{,}948$, $149{,}090$ nnz)
-    \item \textbf{cage14} ($1{,}505{,}785 \times 1{,}505{,}785$, $27{,}130{,}349$ nnz)
-    \item \textbf{nlpkkt160} ($8{,}345{,}600 \times 8{,}345{,}600$, $225{,}422{,}112$ nnz)
-    \item \textbf{Queen\_4147} ($4{,}147{,}110 \times 4{,}147{,}110$, $316{,}548{,}962$ nnz)
-\end{itemize}
+
+Experiments used the 5 fixed matrices from Section \ref{sec:exp}:
+
 Number of processes $P = 1, 2, 4, 8, 16, 32$.
 Metrics: speedup = $T_1 / T_P$ (ideal = $P$), parallel efficiency = speedup / $P$ (ideal = 100\%), average/max SpMV time, communication fraction, GFLOPS, and load balance (min/max rows/nnz/ghosts per rank).
 3 warmup + 10 timed iterations per configuration.
@@ -306,7 +301,7 @@ To complement the strong scaling experiments (fixed problem size, increasing num
 
 Real-world sparse matrices from SuiteSparse have fixed sizes, making true weak scaling difficult. To enable systematic weak scaling tests, we generate synthetic random sparse matrices using a fast approximation of the \textbf{Erdős–Rényi (ER) random graph model} \cite{b9,b10}.
 
-The generation process (implemented in \texttt{matrix\_gen.cpp}) works as follows:
+The generation process (implemented in \texttt{src/matrix\_gen.cpp}) works as follows:
 \begin{itemize}
     \item The global matrix is square ($M = N = \texttt{base\_M} \times P$, where $P$ is the number of MPI processes and \texttt{base\_M} is fixed per rank).
     \item Target non-zero density is user-specified (e.g., 0.005--0.02).
@@ -373,7 +368,7 @@ The communication fraction rises steadily from $3.7\%$ ($P=1$) to $62.4\%$ ($P=8
 Load balance remains excellent (constant local rows per rank, nnz variation within a few percent), thanks to the cyclic row distribution. These findings demonstrate acceptable weak scalability up to moderate process counts, with communication overhead becoming noticeable as expected in distributed SpMV on commodity clusters \cite{b11,b12,b13}.
 
 
-Higher OpenMP threading per rank (e.g., \texttt{--threads 4}) helped overlap computation with communication in some cases, improving weak scaling efficiency.
+Higher OpenMP threading per rank (e.g., \texttt{{-}{-}threads 4}) helped overlap computation with communication in some cases, improving weak scaling efficiency.
 
 Overall, the implementation demonstrates good weak scalability for sparse regimes typical of many scientific applications, with random matrices providing a reproducible stress test for communication patterns.
 
