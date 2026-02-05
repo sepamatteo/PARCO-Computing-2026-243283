@@ -45,10 +45,9 @@ void collect_and_print_metrics(
     stats.gflops_best = (flops_per_spmv / stats.best_time_s) / 1e9;
     stats.gflops_avg  = (flops_per_spmv / stats.avg_time_s)  / 1e9;
 
-    // Speedup & efficiency (you'll need to provide T1 separately or hardcode it)
-    // For now we leave it as placeholder (common practice: replace manually)
-    stats.speedup    = 1.0;     // ← replace with real T1 / Tp
-    stats.efficiency = stats.speedup / size;
+
+    /*stats.speedup    = 1.0;
+    stats.efficiency = stats.speedup / size;*/
 
     // --- Load balance ---
     MPI_Reduce(&local_M,     &stats.rows_min, 1, MPI_INT, MPI_MIN, 0, comm);
@@ -96,8 +95,8 @@ void print_final_statistics(const SpMVStatistics& s) {
     std::cout << "Performance\n";
     std::cout << "  GFLOPS (best)     : " << s.gflops_best << "\n";
     std::cout << "  GFLOPS (avg)      : " << s.gflops_avg  << "\n";
-    std::cout << "  Speedup           : " << s.speedup    << "×\n";
-    std::cout << "  Efficiency        : " << s.efficiency * 100 << " %\n\n";
+    //std::cout << "  Speedup           : " << s.speedup    << "×\n";
+    //std::cout << "  Efficiency        : " << s.efficiency * 100 << " %\n\n";
 
     std::cout << "Load balance\n";
     std::cout << "  Rows per rank     : min=" << s.rows_min

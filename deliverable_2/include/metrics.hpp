@@ -15,8 +15,8 @@ struct SpMVStatistics {
     // Performance
     double gflops_best     = 0.0;
     double gflops_avg      = 0.0;
-    double speedup         = 0.0;
-    double efficiency      = 0.0;
+    //double speedup         = 0.0;
+    //double efficiency      = 0.0;
 
     // Load balance
     int    rows_min = 0, rows_max = 0;
